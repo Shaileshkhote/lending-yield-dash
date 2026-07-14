@@ -215,12 +215,12 @@ const morphoBlueAdapter: LendingAdapter = {
         continue;
 
       const market = marketFromRecord(deployment, currentMarket);
-      markets.push(market);
 
       try {
         const record = historyDay(options)
           ? await loadHistoricalRecord(deployment, market, options)
           : currentRecord;
+        markets.push(market);
         const raw = buildRawMarketSnapshot({
           adapterId: this.id,
           market,
@@ -242,6 +242,7 @@ const morphoBlueAdapter: LendingAdapter = {
         rawPayloads.push(raw);
         snapshots.push(normalizeProtocolSnapshot(raw));
       } catch (error) {
+        if (isMissingHistoricalPoint(error)) continue;
         errors.push({
           marketId: market.id,
           message: error instanceof Error ? error.message : String(error),
@@ -492,6 +493,11 @@ function stateFromHistory(
     netBorrowApy: closestPoint(history.netBorrowApy, timestamp)?.y ?? null,
     fee: market.state?.fee ?? 0,
   };
+}
+
+function isMissingHistoricalPoint(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes(" has no daily history at ");
 }
 
 function closestPoint(
