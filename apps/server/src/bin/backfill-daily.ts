@@ -53,6 +53,7 @@ const WRITE_CONCURRENCY = envInt(
   envInt("BACKFILL_MARKET_CONCURRENCY", 8),
 );
 const MARKET_RETRIES = envInt("BACKFILL_MARKET_RETRIES", 3);
+const BLOCK_RETRIES = envInt("BACKFILL_BLOCK_RETRIES", 4);
 const WORK_SLEEP_MS = envNonNegativeInt(
   "BACKFILL_WORK_SLEEP_MS",
   envNonNegativeInt("BACKFILL_ADAPTER_SLEEP_MS", 0),
@@ -370,12 +371,19 @@ async function blockAtOrBeforeAny(
   timestamp: bigint,
 ): Promise<bigint> {
   const errors: string[] = [];
-  for (const url of urls) {
-    try {
-      console.log(`[backfill] resolving ${timestamp.toString()} with ${url}`);
-      return await blockAtOrBefore(createClient(url), timestamp);
-    } catch (error) {
-      errors.push(`${url}: ${errorMessage(error)}`);
+  for (let attempt = 1; attempt <= BLOCK_RETRIES; attempt += 1) {
+    for (const url of urls) {
+      try {
+        console.log(
+          `[backfill] resolving ${timestamp.toString()} with ${url} attempt=${attempt}/${BLOCK_RETRIES}`,
+        );
+        return await blockAtOrBefore(createClient(url), timestamp);
+      } catch (error) {
+        errors.push(`${url}: ${compactErrorMessage(error)}`);
+      }
+    }
+    if (attempt < BLOCK_RETRIES) {
+      await sleep(2_000 * attempt);
     }
   }
   throw new Error(
@@ -385,7 +393,7 @@ async function blockAtOrBeforeAny(
 
 function createClient(url: string): PublicClient {
   return createPublicClient({
-    transport: http(url, { timeout: 12_000, retryCount: 0 }),
+    transport: http(url, { timeout: 20_000, retryCount: 1 }),
   });
 }
 
@@ -477,9 +485,6 @@ function historicalRpcCandidatesForChain(chain: Chain): string[] {
   const candidates = rpcCandidatesForChain(chain);
   const historicalCandidates = candidates.filter((url) => {
     if (url.includes("flashbots")) return false;
-    if (url.includes("publicnode.com")) return false;
-    if (url.includes("mainnet.base.org")) return false;
-    if (url.includes("developer-access-mainnet.base.org")) return false;
     if (url.includes("cloudflare-eth.com")) return false;
     return true;
   });

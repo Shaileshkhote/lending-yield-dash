@@ -10,6 +10,7 @@ export const SUPPORTED_CHAINS: readonly Chain[] = [CHAIN.ETHEREUM, CHAIN.BASE];
 export const PUBLIC_RPC_URLS: Record<Chain, readonly string[]> = {
   [CHAIN.ETHEREUM]: [
     "https://mainnet.gateway.tenderly.co",
+    "https://eth.llamarpc.com",
     "https://eth.drpc.org",
     "https://ethereum-rpc.publicnode.com",
     "https://cloudflare-eth.com",
@@ -17,6 +18,9 @@ export const PUBLIC_RPC_URLS: Record<Chain, readonly string[]> = {
   ],
   [CHAIN.BASE]: [
     "https://base.gateway.tenderly.co",
+    "https://base.llamarpc.com",
+    "https://1rpc.io/base",
+    "https://base.meowrpc.com",
     "https://base.drpc.org",
     "https://mainnet.base.org/",
     "https://developer-access-mainnet.base.org/",
