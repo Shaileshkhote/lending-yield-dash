@@ -1,0 +1,7 @@
+export const ADAPTER_VERSION = {
+  CONTRACT_RPC_SNAPSHOT: 2,
+  GRAPHQL_SUBGRAPH_SNAPSHOT: 3,
+  OFFICIAL_GRAPHQL_SNAPSHOT: 4
+} as const;
+
+export type AdapterVersion = (typeof ADAPTER_VERSION)[keyof typeof ADAPTER_VERSION];

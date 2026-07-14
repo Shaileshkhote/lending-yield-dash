@@ -1,0 +1,41 @@
+{
+  "name": "@stablewatch-lending/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "ingest": "tsx src/bin/ingest.ts",
+    "materialize": "tsx src/bin/materialize.ts",
+    "r2:clear": "tsx src/bin/clear-r2.ts",
+    "project:daily": "tsx src/bin/project-daily.ts",
+    "backfill:daily": "tsx src/bin/backfill-daily.ts",
+    "history": "tsx src/bin/fetch-history.ts",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:unit": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.716.0",
+    "@nestjs/common": "^10.4.15",
+    "@nestjs/core": "^10.4.15",
+    "@nestjs/platform-express": "^10.4.15",
+    "@nestjs/schedule": "^4.1.2",
+    "@nestjs/serve-static": "^4.0.2",
+    "@stablewatch-lending/adapters": "workspace:*",
+    "@stablewatch-lending/core": "workspace:*",
+    "@stablewatch-lending/db": "workspace:*",
+    "@stablewatch-lending/quality": "workspace:*",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "viem": "^2.21.53",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.8"
+  }
+}

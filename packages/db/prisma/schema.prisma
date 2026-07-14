@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model IngestionRun {
+  id             String              @id
+  status         String
+  startedAt      DateTime            @default(now())
+  finishedAt     DateTime?
+  error          String?
+  rawSnapshots   RawMarketSnapshot[]
+  snapshots      MarketSnapshot[]
+}
+
+model RawMarketSnapshot {
+  id           String           @id @default(cuid())
+  runId        String
+  adapterId    String
+  protocol     String
+  chain        String
+  marketId     String
+  blockNumber  Int
+  sourceMethod String
+  payloadHash  String
+  payloadJson  Json
+  createdAt    DateTime         @default(now())
+  run          IngestionRun     @relation(fields: [runId], references: [id])
+  snapshots    MarketSnapshot[]
+  dailySnapshots DailyMarketSnapshot[]
+
+  @@index([payloadHash])
+  @@index([marketId, createdAt])
+}
+
+model Market {
+  id             String           @id
+  protocol       String
+  chain          String
+  adapterId      String
+  marketType     String
+  assetSymbol    String
+  assetAddress   String
+  sourceMethod   String
+  contracts      Json
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  snapshots      MarketSnapshot[]
+  dailySnapshots DailyMarketSnapshot[]
+  qualityChecks  QualityCheck[]
+
+  @@index([protocol, chain, assetSymbol])
+}
+
+model MarketSnapshot {
+  id                    String           @id @default(cuid())
+  runId                 String
+  marketId              String
+  timestamp             DateTime
+  blockNumber           Int
+  protocol              String
+  adapterId             String
+  chain                 String
+  marketType            String
+  assetSymbol           String
+  assetAddress          String
+  supplyApy             Float?
+  borrowApy             Float?
+  rewardSupplyApy       Float?
+  rewardBorrowApy       Float?
+  netSupplyApy          Float?
+  totalSuppliedUsd      Float?
+  totalBorrowedUsd      Float?
+  availableLiquidityUsd Float?
+  utilization           Float?
+  ltv                   Float?
+  liquidationThreshold  Float?
+  reserveFactor         Float?
+  supplyCapUsd          Float?
+  borrowCapUsd          Float?
+  isActive              Boolean
+  isPaused              Boolean
+  dataQualityScore      Float            @default(100)
+  sourcePayloadHash     String
+  sourceMethod          String
+  sourceContracts       Json
+  rawSnapshotId         String
+  createdAt             DateTime         @default(now())
+  run                   IngestionRun     @relation(fields: [runId], references: [id])
+  market                Market           @relation(fields: [marketId], references: [id])
+  rawSnapshot           RawMarketSnapshot @relation(fields: [rawSnapshotId], references: [id])
+  qualityChecks         QualityCheck[]
+  dailySnapshots        DailyMarketSnapshot[]
+
+  @@index([marketId, timestamp(sort: Desc)])
+  @@index([protocol, chain, assetSymbol])
+  @@index([timestamp(sort: Desc)])
+}
+
+model DailyMarketSnapshot {
+  id                    String            @id @default(cuid())
+  marketId              String
+  date                  DateTime
+  timestamp             DateTime
+  blockNumber           Int
+  protocol              String
+  adapterId             String
+  chain                 String
+  marketType            String
+  assetSymbol           String
+  assetAddress          String
+  supplyApy             Float?
+  borrowApy             Float?
+  rewardSupplyApy       Float?
+  rewardBorrowApy       Float?
+  netSupplyApy          Float?
+  totalSuppliedUsd      Float?
+  totalBorrowedUsd      Float?
+  availableLiquidityUsd Float?
+  utilization           Float?
+  ltv                   Float?
+  liquidationThreshold  Float?
+  reserveFactor         Float?
+  supplyCapUsd          Float?
+  borrowCapUsd          Float?
+  isActive              Boolean
+  isPaused              Boolean
+  dataQualityScore      Float             @default(100)
+  sourcePayloadHash     String
+  sourceMethod          String
+  sourceContracts       Json
+  rawSnapshotId         String
+  snapshotId            String
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  market                Market            @relation(fields: [marketId], references: [id])
+  rawSnapshot           RawMarketSnapshot @relation(fields: [rawSnapshotId], references: [id])
+  snapshot              MarketSnapshot    @relation(fields: [snapshotId], references: [id])
+
+  @@unique([marketId, date])
+  @@index([adapterId, date])
+  @@index([chain, date])
+  @@index([assetSymbol, date])
+  @@index([date])
+  @@index([snapshotId])
+}
+
+model QualityCheck {
+  id            String         @id @default(cuid())
+  snapshotId    String?
+  marketId      String
+  checkName     String
+  status        String
+  severity      String
+  message       String
+  observedValue String?
+  expectedValue String?
+  createdAt     DateTime       @default(now())
+  snapshot      MarketSnapshot? @relation(fields: [snapshotId], references: [id])
+  market        Market         @relation(fields: [marketId], references: [id])
+
+  @@index([marketId, status, createdAt(sort: Desc)])
+}
+
+model MaterializationRun {
+  id         String     @id
+  status     String
+  version    String
+  startedAt  DateTime   @default(now())
+  finishedAt DateTime?
+  error      String?
+  objects    R2Object[]
+}
+
+model R2Object {
+  id                     String             @id @default(cuid())
+  key                    String
+  etag                   String?
+  contentHash            String
+  contentType            String
+  byteSize               Int
+  generatedAt            DateTime           @default(now())
+  materializationRunId   String
+  publicUrl              String?
+  materializationRun     MaterializationRun @relation(fields: [materializationRunId], references: [id])
+
+  @@index([key, generatedAt(sort: Desc)])
+}
