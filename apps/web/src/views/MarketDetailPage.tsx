@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { BarChart3, ExternalLink, Info, Percent, Share2, WalletCards } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brush, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse, type HistoryPoint, type LendingMarket, type PoolChartResponse } from "../lib/api";
 
 type ChartMetric = "supplied" | "apy" | "borrowed";
@@ -110,7 +111,7 @@ export function MarketDetailPage() {
 
         <header className="asset-hero">
           <div className="asset-identity">
-            <span className="asset-token-mark">{market.assetSymbol.slice(0, 1)}</span>
+            <TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="hero" />
             <div>
               <h1>{market.assetSymbol}</h1>
               <p>{market.protocol}</p>
@@ -200,7 +201,7 @@ export function MarketDetailPage() {
               <dt>Protocol</dt>
               <dd>{market.protocol}</dd>
               <dt>Token</dt>
-              <dd><span className="mini-token">{market.assetSymbol.slice(0, 1)}</span>{market.assetSymbol}</dd>
+              <dd><TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="ticker" />{market.assetSymbol}</dd>
               <dt>Chain</dt>
               <dd>{market.chain}</dd>
               <dt>Market Type</dt>

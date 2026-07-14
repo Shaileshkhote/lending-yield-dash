@@ -65,7 +65,7 @@ export function MarketTable({ markets }: Props) {
             <tr key={market.marketId}>
               <td>
                 <Link className="market-link" href={`/lending/markets/${market.marketId}`}>
-                  <TokenLogo symbol={market.assetSymbol} size="market" />
+                  <TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="market" />
                   <span className="asset-copy">
                   <strong>{market.assetSymbol}</strong>
                   <span>

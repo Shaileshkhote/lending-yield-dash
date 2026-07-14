@@ -22,9 +22,9 @@ const ticker = [
   { symbol: "syrupUSDT", value: "$437.93M", change: "-4.3%", tone: "down" },
   { symbol: "OUSG", value: "$408.12M", change: "-0.6%", tone: "down" },
   { symbol: "M", value: "$295.11M", change: "-8.6%", tone: "down" },
-  { symbol: "sDAI", value: "$175.22M", change: "+0.5%", tone: "up" },
+  { symbol: "sDAI", value: "$175.22M", change: "+0.5%", tone: "up", chain: "ethereum", address: "0x83F20F44975D03b1b09e64809B757c47f942BEeA" },
   { symbol: "sGHO", value: "$147.39M", change: "-3.0%", tone: "down" },
-  { symbol: "USDC", value: "$3.18B", change: "-2.4%", tone: "down" }
+  { symbol: "USDC", value: "$3.18B", change: "-2.4%", tone: "down", chain: "ethereum", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="ticker-strip">
             {ticker.map((item) => (
               <div className="ticker-item" key={item.symbol}>
-                <TokenLogo symbol={item.symbol} size="ticker" />
+                <TokenLogo address={item.address} chain={item.chain} symbol={item.symbol} size="ticker" />
                 <div>
                   <strong>{item.symbol}</strong>
                   <small>{item.value}</small>

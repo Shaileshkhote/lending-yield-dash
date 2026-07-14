@@ -17,7 +17,8 @@
     "next": "16.2.10",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "recharts": "^2.13.3"
+    "recharts": "^2.13.3",
+    "viem": "^2.21.53"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

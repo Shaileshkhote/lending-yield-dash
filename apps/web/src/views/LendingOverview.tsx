@@ -72,7 +72,7 @@ export function LendingOverview() {
             {trending.map((market, index) => (
               <li key={market.marketId}>
                 <span className="rank">{index + 1}.</span>
-                <TokenLogo symbol={market.assetSymbol} size="market" />
+                <TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="market" />
                 <span className="trend-copy">
                   <strong>{market.assetSymbol}</strong>
                   <small>{market.protocol}</small>
