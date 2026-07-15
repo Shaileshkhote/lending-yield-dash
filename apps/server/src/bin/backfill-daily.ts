@@ -7,6 +7,7 @@ import { loadEnv } from "../config/env";
 import { PrismaService } from "../db/prisma.service";
 import { SnapshotPersistenceService } from "../ingestion/snapshot-persistence.service";
 import { envInt, mapWithConcurrency, shuffle } from "../utils/concurrency";
+import { runQualityChecks, scoreQuality } from "@stablewatch-lending/quality";
 import {
   isSupportedChain,
   lendingAdapters,
@@ -16,7 +17,11 @@ import {
   type LendingAdapter,
   type Chain,
 } from "@stablewatch-lending/adapters";
-import type { AdapterContext } from "@stablewatch-lending/core";
+import type {
+  AdapterContext,
+  CanonicalMarketSnapshot,
+  RawMarketSnapshot,
+} from "@stablewatch-lending/core";
 
 type RpcCandidateMap = Partial<Record<Chain, string[]>>;
 type BlockNumberMap = Partial<Record<string, bigint>>;
@@ -60,6 +65,7 @@ const WORK_SLEEP_MS = envNonNegativeInt(
 );
 const FORCE_BACKFILL = process.env.BACKFILL_FORCE === "1";
 const SHUFFLE_WORK = process.env.BACKFILL_SHUFFLE !== "0";
+const COMPACT_HISTORY = process.env.BACKFILL_COMPACT !== "0";
 
 async function main() {
   const targets = parseTargets(process.argv.slice(2));
@@ -112,9 +118,11 @@ async function main() {
         errors: [],
       };
 
-      await prisma.ingestionRun.create({
-        data: { id: runId, status: "running", startedAt: new Date() },
-      });
+      if (!COMPACT_HISTORY) {
+        await prisma.ingestionRun.create({
+          data: { id: runId, status: "running", startedAt: new Date() },
+        });
+      }
 
       const selectedAdapters = lendingAdapters.filter(
         (adapter) =>
@@ -156,16 +164,18 @@ async function main() {
         });
       });
 
-      await prisma.ingestionRun.update({
-        where: { id: runId },
-        data: {
-          status: summary.errors.length ? "partial_success" : "success",
-          finishedAt: new Date(),
-          error: summary.errors.length
-            ? JSON.stringify(summary.errors.slice(0, 10))
-            : null,
-        },
-      });
+      if (!COMPACT_HISTORY) {
+        await prisma.ingestionRun.update({
+          where: { id: runId },
+          data: {
+            status: summary.errors.length ? "partial_success" : "success",
+            finishedAt: new Date(),
+            error: summary.errors.length
+              ? JSON.stringify(summary.errors.slice(0, 10))
+              : null,
+          },
+        });
+      }
       summaries.push(summary);
       console.log(JSON.stringify(summary));
     }
@@ -258,7 +268,9 @@ async function runBackfillWorkItem(args: {
           if (!canonical) {
             throw new Error(`Missing canonical snapshot for ${raw.marketId}`);
           }
-          const result = await persistence.persistSnapshot(runId, raw, canonical);
+          const result = COMPACT_HISTORY
+            ? await persistCompactDailySnapshot(prisma, raw, canonical)
+            : await persistence.persistSnapshot(runId, raw, canonical);
           summary.snapshots += 1;
           summary.updated += result.created ? 0 : 1;
           summary.checks += result.checks;
@@ -295,6 +307,130 @@ async function runBackfillWorkItem(args: {
       message: `${chain}: ${errorMessage(error)}`,
     });
   }
+}
+
+async function persistCompactDailySnapshot(
+  prisma: PrismaService,
+  raw: RawMarketSnapshot,
+  canonical: CanonicalMarketSnapshot,
+): Promise<{ checks: number; created: boolean }> {
+  const timestamp = new Date(canonical.timestamp);
+  const date = startOfUtcDay(timestamp);
+  const previous = await previousDailySnapshot(prisma, canonical.marketId, date);
+  const qualityResults = runQualityChecks(canonical, previous ?? undefined);
+  const dataQualityScore = scoreQuality(qualityResults);
+  const existing = await prisma.dailyMarketSnapshot.findUnique({
+    where: {
+      marketId_date: {
+        marketId: canonical.marketId,
+        date,
+      },
+    },
+    select: { id: true },
+  });
+
+  await prisma.dailyMarketSnapshot.upsert({
+    where: {
+      marketId_date: {
+        marketId: canonical.marketId,
+        date,
+      },
+    },
+    update: compactDailySnapshotData(raw, canonical, timestamp, dataQualityScore),
+    create: {
+      marketId: canonical.marketId,
+      date,
+      ...compactDailySnapshotData(raw, canonical, timestamp, dataQualityScore),
+    },
+  });
+
+  return { checks: qualityResults.length, created: !existing };
+}
+
+async function previousDailySnapshot(
+  prisma: PrismaService,
+  marketId: string,
+  before: Date,
+): Promise<CanonicalMarketSnapshot | null> {
+  const previous = await prisma.dailyMarketSnapshot.findFirst({
+    where: { marketId, date: { lt: before } },
+    orderBy: { date: "desc" },
+  });
+  if (!previous) return null;
+  return {
+    timestamp: previous.timestamp.toISOString(),
+    blockNumber: previous.blockNumber,
+    protocol: previous.protocol,
+    adapterId: previous.adapterId,
+    chain: previous.chain,
+    marketId: previous.marketId,
+    marketType: previous.marketType as CanonicalMarketSnapshot["marketType"],
+    assetSymbol: previous.assetSymbol,
+    assetAddress: previous.assetAddress,
+    supplyApy: previous.supplyApy,
+    borrowApy: previous.borrowApy,
+    rewardSupplyApy: previous.rewardSupplyApy,
+    rewardBorrowApy: previous.rewardBorrowApy,
+    netSupplyApy: previous.netSupplyApy,
+    totalSuppliedUsd: previous.totalSuppliedUsd,
+    totalBorrowedUsd: previous.totalBorrowedUsd,
+    availableLiquidityUsd: previous.availableLiquidityUsd,
+    utilization: previous.utilization,
+    ltv: previous.ltv,
+    liquidationThreshold: previous.liquidationThreshold,
+    reserveFactor: previous.reserveFactor,
+    supplyCapUsd: previous.supplyCapUsd,
+    borrowCapUsd: previous.borrowCapUsd,
+    isActive: previous.isActive,
+    isPaused: previous.isPaused,
+    dataQualityScore: previous.dataQualityScore,
+    source: {
+      rawSnapshotId: previous.rawSnapshotId,
+      payloadHash: previous.sourcePayloadHash,
+      method: previous.sourceMethod,
+      contracts: previous.sourceContracts as string[],
+    },
+  };
+}
+
+function compactDailySnapshotData(
+  raw: RawMarketSnapshot,
+  snapshot: CanonicalMarketSnapshot,
+  timestamp: Date,
+  dataQualityScore: number,
+) {
+  return {
+    timestamp,
+    blockNumber: snapshot.blockNumber,
+    protocol: snapshot.protocol,
+    adapterId: snapshot.adapterId,
+    chain: snapshot.chain,
+    marketType: snapshot.marketType,
+    assetSymbol: snapshot.assetSymbol,
+    assetAddress: snapshot.assetAddress,
+    supplyApy: snapshot.supplyApy,
+    borrowApy: snapshot.borrowApy,
+    rewardSupplyApy: snapshot.rewardSupplyApy,
+    rewardBorrowApy: snapshot.rewardBorrowApy,
+    netSupplyApy: snapshot.netSupplyApy,
+    totalSuppliedUsd: snapshot.totalSuppliedUsd,
+    totalBorrowedUsd: snapshot.totalBorrowedUsd,
+    availableLiquidityUsd: snapshot.availableLiquidityUsd,
+    utilization: snapshot.utilization,
+    ltv: snapshot.ltv,
+    liquidationThreshold: snapshot.liquidationThreshold,
+    reserveFactor: snapshot.reserveFactor,
+    supplyCapUsd: snapshot.supplyCapUsd,
+    borrowCapUsd: snapshot.borrowCapUsd,
+    isActive: snapshot.isActive,
+    isPaused: snapshot.isPaused,
+    dataQualityScore,
+    sourcePayloadHash: snapshot.source.payloadHash || raw.payloadHash,
+    sourceMethod: snapshot.source.method || raw.sourceMethod,
+    sourceContracts: snapshot.source.contracts,
+    rawSnapshotId: `compact_raw_${raw.payloadHash}`,
+    snapshotId: `compact_snapshot_${snapshot.marketId}_${timestamp.toISOString().slice(0, 10)}`,
+  };
 }
 
 function parseTargets(args: string[]): string[] {
@@ -341,6 +477,10 @@ function previousUtcDates(count: number): string[] {
 
 function dateToUnix(date: string): bigint {
   return BigInt(Math.floor(Date.parse(`${date}T00:00:00.000Z`) / 1000));
+}
+
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 async function blockAtOrBefore(
