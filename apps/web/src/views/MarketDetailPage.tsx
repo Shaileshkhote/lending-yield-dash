@@ -87,14 +87,8 @@ export function MarketDetailPage() {
   const chartHeight = isCompactChart ? 360 : 430;
   const brushY = isCompactChart ? 292 : 348;
   const activeChart = useMemo(() => {
-    const config = getChartConfig(chartMetric);
-    const values = chartData.map((point) => Number(point[config.dataKey] ?? 0));
-    return {
-      ...config,
-      values,
-      path: buildChartPath(values)
-    };
-  }, [chartData, chartMetric]);
+    return getChartConfig(chartMetric);
+  }, [chartMetric]);
 
   const handleShare = async () => {
     if (!market) return;
@@ -190,16 +184,6 @@ export function MarketDetailPage() {
                 </Brush>
               </LineChart>
             </ResponsiveContainer>
-            {activeChart.path ? (
-              <>
-                <svg className="asset-chart-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  <path d={activeChart.path} />
-                </svg>
-                <svg className="asset-chart-mini-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  <path d={activeChart.path} />
-                </svg>
-              </>
-            ) : null}
             <strong>stablewatch</strong>
           </div>
           <button className="share-chart" type="button" onClick={handleShare}>
@@ -325,19 +309,4 @@ function getChartConfig(metric: ChartMetric): { dataKey: "chartSuppliedUsd" | "c
   if (metric === "supplied") return { dataKey: "chartSuppliedUsd", label: "Total Supplied", format: formatUsd };
   if (metric === "borrowed") return { dataKey: "chartBorrowedUsd", label: "Borrowed", format: formatUsd };
   return { dataKey: "chartApy", label: "APY", format: (value) => `${value.toFixed(2)}%` };
-}
-
-function buildChartPath(values: Array<number | null | undefined>): string | null {
-  const numeric = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-  if (!numeric.length) return null;
-  const min = Math.min(...numeric, 0);
-  const max = Math.max(...numeric, min + 1);
-  const paddedMax = max === min ? max + 1 : max;
-  const points = values.map((raw, index) => {
-    const value = typeof raw === "number" && Number.isFinite(raw) ? raw : numeric[numeric.length - 1];
-    const x = values.length <= 1 ? 0 : (index / (values.length - 1)) * 100;
-    const y = 86 - ((value - min) / (paddedMax - min)) * 70;
-    return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-  });
-  return points.join(" ");
 }

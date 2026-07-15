@@ -1241,43 +1241,6 @@ select {
   pointer-events: none;
 }
 
-.asset-chart-line {
-  position: absolute;
-  left: 86px;
-  right: 36px;
-  top: 52px;
-  width: calc(100% - 122px);
-  height: 288px;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.asset-chart-line path {
-  fill: none;
-  stroke: #564cff;
-  stroke-width: 1.8;
-  vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 5px rgb(86 76 255 / 45%));
-}
-
-.asset-chart-mini-line {
-  position: absolute;
-  left: 92px;
-  top: 354px;
-  width: calc(100% - 134px);
-  height: 36px;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.asset-chart-mini-line path {
-  fill: none;
-  stroke: #7b74ff;
-  stroke-width: 1.15;
-  vector-effect: non-scaling-stroke;
-}
-
 .asset-chart .recharts-brush {
   filter: drop-shadow(0 0 8px rgb(86 76 255 / 18%));
 }
@@ -1813,17 +1776,6 @@ select {
   .asset-chart strong {
     font-size: clamp(42px, 15vw, 70px);
     letter-spacing: 0;
-  }
-
-  .asset-chart-line {
-    left: 50px;
-    right: 18px;
-    width: calc(100% - 68px);
-  }
-
-  .asset-chart-mini-line {
-    left: 56px;
-    width: calc(100% - 76px);
   }
 
   .share-chart {
