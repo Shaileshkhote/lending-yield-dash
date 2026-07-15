@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { formatPct, formatSignedPct, formatUsd, marketHealth, type LendingMarket } from "../lib/api";
 import { TokenLogo } from "./TokenLogo";
 
@@ -98,7 +99,7 @@ export function MarketTable({ markets, visibleColumns = defaultColumns }: Props)
               <th key={column.key}>
                 <button className="sort-button" type="button" onClick={() => toggleSort(column.key)}>
                   {column.label}
-                  <span className="sort-mark">{sortKey === column.key ? (sortDirection === "asc" ? "Ξ↑" : "Ξ↓") : "Ξ↕"}</span>
+                  <SortIcon active={sortKey === column.key} direction={sortDirection} />
                 </button>
               </th>
             ))}
@@ -115,6 +116,15 @@ export function MarketTable({ markets, visibleColumns = defaultColumns }: Props)
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
+  const Icon = !active ? ArrowUpDown : direction === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <span className={active ? "sort-mark active" : "sort-mark"} aria-hidden="true">
+      <Icon size={13} strokeWidth={2} />
+    </span>
   );
 }
 
