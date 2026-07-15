@@ -37,6 +37,14 @@ describe("lending adapters", () => {
   it("exposes DefiLlama-style adapter maps", () => {
     expect(getAdapter("aave-v3").fetch).toEqual(expect.any(Function));
     expect(getAdapter("aave-v3").adapter.base.start).toBe("2023-08-21");
+    expect(getAdapter("aave-v4").protocol).toBe("Aave V4");
+    expect(getAdapter("aave-v4").version).toBe(
+      ADAPTER_VERSION.OFFICIAL_GRAPHQL_SNAPSHOT,
+    );
+    expect(getAdapter("aave-v4").adapter.ethereum.chainId).toBe(1);
+    expect(getAdapter("aave-v4").adapter.ethereum.start).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/,
+    );
     expect(getAdapter("spark").protocol).toBe("Spark");
     expect(getAdapter("spark").version).toBe(
       ADAPTER_VERSION.GRAPHQL_SUBGRAPH_SNAPSHOT,
@@ -59,6 +67,11 @@ describe("lending adapters", () => {
     expect(
       getAdapter("aave-v3").dataAvailability.history?.startDateByChain.base,
     ).toBe("2023-08-21");
+    expect(getAdapter("aave-v4").dataAvailability.current).toBe(true);
+    expect(
+      getAdapter("aave-v4").dataAvailability.history?.startDateByChain
+        .ethereum,
+    ).toBe(getAdapter("aave-v4").adapter.ethereum.start);
     expect(
       getAdapter("spark").dataAvailability.history?.startDateByChain.ethereum,
     ).toBe("2023-03-07");

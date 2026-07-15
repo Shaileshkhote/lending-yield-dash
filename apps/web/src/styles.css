@@ -932,10 +932,33 @@ select {
 }
 
 .table-wrap {
-  overflow-x: auto;
+  max-height: min(680px, calc(100vh - 260px));
+  overflow: auto;
+  scrollbar-color: #3a3a3a #101010;
+  scrollbar-width: thin;
+}
+
+.market-panel .table-wrap {
+  max-height: min(620px, calc(100vh - 280px));
+}
+
+.table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: #101010;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  border: 2px solid #101010;
+  border-radius: 999px;
+  background: #3a3a3a;
 }
 
 .market-table {
+  min-width: 1120px;
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
@@ -951,7 +974,11 @@ select {
 }
 
 .market-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   height: 40px;
+  background: #111111;
   color: #f0f0f0;
   font-weight: 520;
 }

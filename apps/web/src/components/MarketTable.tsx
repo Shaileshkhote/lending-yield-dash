@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatPct, formatSignedPct, formatUsd, marketHealth, poolLinks, type LendingMarket } from "../lib/api";
+import { formatPct, formatSignedPct, formatUsd, marketHealth, type LendingMarket } from "../lib/api";
 import { TokenLogo } from "./TokenLogo";
 
 type Props = {
   markets: LendingMarket[];
 };
 
-type SortKey = "asset" | "supplied" | "borrowed" | "utilization" | "supplyApy" | "borrowApy" | "quality";
+type SortKey = "asset" | "supplied" | "borrowed" | "utilization" | "sevenDayApy" | "apySevenDayChange" | "thirtyDayApy" | "borrowApy" | "quality";
 type SortDirection = "asc" | "desc";
 
 const columns: Array<{ key: SortKey; label: string }> = [
@@ -15,7 +15,9 @@ const columns: Array<{ key: SortKey; label: string }> = [
   { key: "supplied", label: "Total Supplied" },
   { key: "borrowed", label: "Total Borrowed" },
   { key: "utilization", label: "Utilization" },
-  { key: "supplyApy", label: "Supply APY" },
+  { key: "sevenDayApy", label: "7d APY" },
+  { key: "apySevenDayChange", label: "APY 7d Change" },
+  { key: "thirtyDayApy", label: "30d APY" },
   { key: "borrowApy", label: "Borrow APY" },
   { key: "quality", label: "Status" }
 ];
@@ -78,13 +80,12 @@ export function MarketTable({ markets }: Props) {
               <td>{formatUsd(market.totalSuppliedUsd)}</td>
               <td>{formatUsd(market.totalBorrowedUsd)}</td>
               <td>{formatPct(market.utilization)}</td>
-              <td><span className={apyTone(market.netSupplyApy ?? market.supplyApy)}>{formatSignedPct(market.netSupplyApy ?? market.supplyApy)}</span></td>
+              <td><span className={apyTone(market.sevenDayApy ?? market.netSupplyApy ?? market.supplyApy)}>{formatPct(market.sevenDayApy ?? market.netSupplyApy ?? market.supplyApy)}</span></td>
+              <td><span className={apyTone(market.apySevenDayChange)}>{formatSignedPct(market.apySevenDayChange)}</span></td>
+              <td><span className={apyTone(market.thirtyDayApy ?? market.netSupplyApy ?? market.supplyApy)}>{formatPct(market.thirtyDayApy ?? market.netSupplyApy ?? market.supplyApy)}</span></td>
               <td><span className={apyTone(market.borrowApy)}>{formatSignedPct(market.borrowApy)}</span></td>
               <td>
                 <HealthBadge market={market} />
-              </td>
-              <td>
-                <a className="pool-link" href={poolLinks(market).app} target="_blank" rel="noreferrer">Pool</a>
               </td>
             </tr>
           ))}
@@ -115,7 +116,9 @@ function sortValue(market: LendingMarket, key: SortKey): string | number {
   if (key === "supplied") return market.totalSuppliedUsd ?? 0;
   if (key === "borrowed") return market.totalBorrowedUsd ?? 0;
   if (key === "utilization") return market.utilization ?? 0;
-  if (key === "supplyApy") return market.netSupplyApy ?? market.supplyApy ?? 0;
+  if (key === "sevenDayApy") return market.sevenDayApy ?? market.netSupplyApy ?? market.supplyApy ?? 0;
+  if (key === "apySevenDayChange") return market.apySevenDayChange ?? 0;
+  if (key === "thirtyDayApy") return market.thirtyDayApy ?? market.netSupplyApy ?? market.supplyApy ?? 0;
   if (key === "borrowApy") return market.borrowApy ?? 0;
   return market.dataQualityScore ?? 0;
 }

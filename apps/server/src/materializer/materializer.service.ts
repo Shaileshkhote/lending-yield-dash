@@ -22,6 +22,9 @@ type CurrentMarketRow = {
   assetSymbol: string;
   assetAddress: string;
   supplyApy: number | null;
+  sevenDayApy: number | null;
+  apySevenDayChange: number | null;
+  thirtyDayApy: number | null;
   borrowApy: number | null;
   rewardSupplyApy: number | null;
   rewardBorrowApy: number | null;
@@ -50,6 +53,12 @@ type CurrentLiteMarketRow = Omit<
   CurrentMarketRow,
   "ltv" | "liquidationThreshold" | "reserveFactor" | "supplyCapUsd" | "borrowCapUsd" | "source"
 >;
+
+type ApyWindowMetrics = {
+  sevenDayApy: number | null;
+  apySevenDayChange: number | null;
+  thirtyDayApy: number | null;
+};
 
 type DailySnapshotRow = {
   marketId: string;
@@ -112,7 +121,7 @@ type CurrentDailySnapshotRow = SnapshotLike & {
   sourceContracts: unknown;
 };
 
-type CurrentLiteDailySnapshotRow = SnapshotLike;
+type CurrentLiteDailySnapshotRow = SnapshotLike & ApyWindowMetrics;
 
 type RangeSelection = number | "all";
 
@@ -314,6 +323,7 @@ export class MaterializerService {
     const latest = await this.prisma.$queryRaw<CurrentDailySnapshotRow[]>(Prisma.sql`
       SELECT DISTINCT ON ("marketId")
         "marketId",
+        "date",
         "timestamp",
         "blockNumber",
         "protocol",
@@ -346,6 +356,7 @@ export class MaterializerService {
       WHERE COALESCE("totalSuppliedUsd", 0) > ${MIN_CURRENT_SUPPLIED_USD}
       ORDER BY "marketId", "date" DESC, "timestamp" DESC
     `);
+    const apyMetrics = await this.apyWindowMetrics(latest);
 
     return {
       generatedAt: new Date().toISOString(),
@@ -359,6 +370,7 @@ export class MaterializerService {
         assetSymbol: snapshot.assetSymbol,
         assetAddress: snapshot.assetAddress,
         supplyApy: snapshot.supplyApy,
+        ...(apyMetrics.get(snapshot.marketId) ?? emptyApyWindowMetrics()),
         borrowApy: snapshot.borrowApy,
         rewardSupplyApy: snapshot.rewardSupplyApy,
         rewardBorrowApy: snapshot.rewardBorrowApy,
@@ -387,31 +399,75 @@ export class MaterializerService {
 
   async currentLiteMarkets(): Promise<{ generatedAt: string; status: "success"; data: CurrentLiteMarketRow[] }> {
     const latest = await this.prisma.$queryRaw<CurrentLiteDailySnapshotRow[]>(Prisma.sql`
-      SELECT DISTINCT ON ("marketId")
-        "marketId",
-        "timestamp",
-        "blockNumber",
-        "protocol",
-        "adapterId",
-        "chain",
-        "marketType",
-        "assetSymbol",
-        "assetAddress",
-        "supplyApy",
-        "borrowApy",
-        "rewardSupplyApy",
-        "rewardBorrowApy",
-        "netSupplyApy",
-        "totalSuppliedUsd",
-        "totalBorrowedUsd",
-        "availableLiquidityUsd",
-        "utilization",
-        "isActive",
-        "isPaused",
-        "dataQualityScore"
-      FROM "DailyMarketSnapshot"
-      WHERE COALESCE("totalSuppliedUsd", 0) > ${MIN_CURRENT_SUPPLIED_USD}
-      ORDER BY "marketId", "date" DESC, "timestamp" DESC
+      WITH latest AS (
+        SELECT DISTINCT ON ("marketId")
+          "marketId",
+          "date",
+          "timestamp",
+          "blockNumber",
+          "protocol",
+          "adapterId",
+          "chain",
+          "marketType",
+          "assetSymbol",
+          "assetAddress",
+          "supplyApy",
+          "borrowApy",
+          "rewardSupplyApy",
+          "rewardBorrowApy",
+          "netSupplyApy",
+          "totalSuppliedUsd",
+          "totalBorrowedUsd",
+          "availableLiquidityUsd",
+          "utilization",
+          "isActive",
+          "isPaused",
+          "dataQualityScore"
+        FROM "DailyMarketSnapshot"
+        WHERE COALESCE("totalSuppliedUsd", 0) > ${MIN_CURRENT_SUPPLIED_USD}
+        ORDER BY "marketId", "date" DESC, "timestamp" DESC
+      ),
+      history AS (
+        SELECT
+          h."marketId",
+          h."date",
+          COALESCE(h."netSupplyApy", h."supplyApy") AS "apy",
+          latest."date" AS "latestDate"
+        FROM "DailyMarketSnapshot" h
+        JOIN latest ON latest."marketId" = h."marketId"
+        WHERE h."date" >= latest."date" - INTERVAL '37 days'
+          AND h."date" <= latest."date"
+      ),
+      metrics AS (
+        SELECT
+          "marketId",
+          ROUND(AVG("apy") FILTER (WHERE "date" >= "latestDate" - INTERVAL '6 days')::numeric, 6)::double precision AS "sevenDayApy",
+          ROUND(AVG("apy") FILTER (WHERE "date" >= "latestDate" - INTERVAL '29 days')::numeric, 6)::double precision AS "thirtyDayApy"
+        FROM history
+        WHERE "apy" IS NOT NULL
+        GROUP BY "marketId"
+      ),
+      previous AS (
+        SELECT DISTINCT ON (h."marketId")
+          h."marketId",
+          COALESCE(h."netSupplyApy", h."supplyApy") AS "previousApy"
+        FROM "DailyMarketSnapshot" h
+        JOIN latest ON latest."marketId" = h."marketId"
+        WHERE h."date" <= latest."date" - INTERVAL '7 days'
+          AND COALESCE(h."netSupplyApy", h."supplyApy") IS NOT NULL
+        ORDER BY h."marketId", h."date" DESC, h."timestamp" DESC
+      )
+      SELECT
+        latest.*,
+        metrics."sevenDayApy",
+        CASE
+          WHEN previous."previousApy" IS NULL OR COALESCE(latest."netSupplyApy", latest."supplyApy") IS NULL THEN NULL
+          ELSE ROUND((COALESCE(latest."netSupplyApy", latest."supplyApy") - previous."previousApy")::numeric, 6)::double precision
+        END AS "apySevenDayChange",
+        metrics."thirtyDayApy"
+      FROM latest
+      LEFT JOIN metrics ON metrics."marketId" = latest."marketId"
+      LEFT JOIN previous ON previous."marketId" = latest."marketId"
     `);
 
     return {
@@ -426,6 +482,9 @@ export class MaterializerService {
         assetSymbol: snapshot.assetSymbol,
         assetAddress: snapshot.assetAddress,
         supplyApy: snapshot.supplyApy,
+        sevenDayApy: snapshot.sevenDayApy,
+        apySevenDayChange: snapshot.apySevenDayChange,
+        thirtyDayApy: snapshot.thirtyDayApy,
         borrowApy: snapshot.borrowApy,
         rewardSupplyApy: snapshot.rewardSupplyApy,
         rewardBorrowApy: snapshot.rewardBorrowApy,
@@ -440,6 +499,60 @@ export class MaterializerService {
         lastUpdated: snapshot.timestamp.toISOString()
       }))
     };
+  }
+
+  private async apyWindowMetrics(latest: SnapshotLike[]): Promise<Map<string, ApyWindowMetrics>> {
+    const fallback = new Map<string, ApyWindowMetrics>(
+      latest.map((snapshot) => [
+        snapshot.marketId,
+        { sevenDayApy: null, apySevenDayChange: null, thirtyDayApy: null }
+      ])
+    );
+    if (!latest.length) return fallback;
+
+    const marketIds = latest.map((snapshot) => snapshot.marketId);
+    const latestByMarket = new Map(
+      latest.map((snapshot) => [
+        snapshot.marketId,
+        startOfUtcDay(snapshot.date ?? snapshot.timestamp)
+      ])
+    );
+    const earliest = new Date(Math.min(...[...latestByMarket.values()].map((date) => date.getTime())));
+    earliest.setUTCDate(earliest.getUTCDate() - 37);
+
+    const rows = await this.prisma.dailyMarketSnapshot.findMany({
+      where: {
+        marketId: { in: marketIds },
+        date: { gte: earliest }
+      },
+      orderBy: [{ marketId: "asc" }, { date: "asc" }, { timestamp: "asc" }]
+    });
+    const byMarket = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const list = byMarket.get(row.marketId) ?? [];
+      list.push(row);
+      byMarket.set(row.marketId, list);
+    }
+
+    for (const [marketId, marketRows] of byMarket) {
+      const latestDate = latestByMarket.get(marketId);
+      if (!latestDate) continue;
+      const latestRow = latestForDate(marketRows, latestDate);
+      const previousDate = addUtcDays(latestDate, -7);
+      const previousRow = latestForDate(marketRows, previousDate);
+      const latestApy = apyValue(latestRow);
+      const previousApy = apyValue(previousRow);
+      fallback.set(marketId, {
+        sevenDayApy: averageApyForWindow(marketRows, latestDate, 7),
+        apySevenDayChange:
+          latestApy === null || previousApy === null
+            ? null
+            : round(latestApy - previousApy, 6),
+        thirtyDayApy: averageApyForWindow(marketRows, latestDate, 30)
+      });
+    }
+
+    return fallback;
   }
 
   async materializeCurrentLite(): Promise<{ generatedAt: string; files: number; markets: number }> {
@@ -661,6 +774,61 @@ function jsonFile(key: string, value: unknown): CacheFile {
     key,
     body: `${JSON.stringify(value, null, 2)}\n`
   };
+}
+
+function emptyApyWindowMetrics(): ApyWindowMetrics {
+  return {
+    sevenDayApy: null,
+    apySevenDayChange: null,
+    thirtyDayApy: null
+  };
+}
+
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function addUtcDays(date: Date, days: number): Date {
+  const value = startOfUtcDay(date);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value;
+}
+
+function latestForDate<T extends { date: Date; timestamp: Date }>(
+  rows: T[],
+  date: Date
+): T | undefined {
+  const day = date.toISOString().slice(0, 10);
+  return rows
+    .filter((row) => row.date.toISOString().slice(0, 10) === day)
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+}
+
+function averageApyForWindow(
+  rows: Array<{ date: Date; supplyApy: number | null; netSupplyApy: number | null }>,
+  latestDate: Date,
+  days: number
+): number | null {
+  const from = addUtcDays(latestDate, -days + 1);
+  const values = rows
+    .filter((row) => row.date >= from && row.date <= latestDate)
+    .map(apyValue)
+    .filter((value): value is number => value !== null);
+  if (!values.length) return null;
+  return round(
+    values.reduce((sum, value) => sum + value, 0) / values.length,
+    6
+  );
+}
+
+function apyValue(row: { supplyApy: number | null; netSupplyApy: number | null } | undefined): number | null {
+  if (!row) return null;
+  return row.netSupplyApy ?? row.supplyApy;
+}
+
+function round(value: number, decimals: number): number {
+  const scale = 10 ** decimals;
+  return Math.round(value * scale) / scale;
 }
 
 function rangeStart(days: number): Date {

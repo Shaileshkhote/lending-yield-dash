@@ -16,7 +16,7 @@ export function LendingOverview() {
   const [query, setQuery] = useState("");
   const [chainFilter, setChainFilter] = useState("all");
   const [assetTypeFilter, setAssetTypeFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [protocolFilter, setProtocolFilter] = useState("all");
 
   useEffect(() => {
     fetchJson<CurrentMarketsResponse>("/api/lending/markets/current").then(setData).catch((err) => setError(err.message));
@@ -34,7 +34,7 @@ export function LendingOverview() {
 
   const rows = data?.data ?? [];
   const chains = useMemo(() => [...new Set(rows.map((row) => row.chain))].sort(), [rows]);
-  const categories = useMemo(() => [...new Set(rows.map((row) => row.protocol))].sort(), [rows]);
+  const protocols = useMemo(() => [...new Set(rows.map((row) => row.protocol))].sort(), [rows]);
   const filteredRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const visibleRows = rows.filter((row) => {
@@ -42,12 +42,12 @@ export function LendingOverview() {
         ? [row.assetSymbol, row.protocol, row.chain, row.marketId].some((value) => value.toLowerCase().includes(normalized))
         : true;
       const matchesChain = chainFilter === "all" || row.chain === chainFilter;
-      const matchesCategory = categoryFilter === "all" || row.protocol === categoryFilter;
+      const matchesProtocol = protocolFilter === "all" || row.protocol === protocolFilter;
       const matchesAssetType = assetTypeFilter === "all" || assetTypeForMarket(row) === assetTypeFilter;
-      return matchesQuery && matchesChain && matchesCategory && matchesAssetType;
+      return matchesQuery && matchesChain && matchesProtocol && matchesAssetType;
     });
     return [...visibleRows].sort((a, b) => (b.totalSuppliedUsd ?? 0) - (a.totalSuppliedUsd ?? 0));
-  }, [assetTypeFilter, categoryFilter, chainFilter, query, rows]);
+  }, [assetTypeFilter, protocolFilter, chainFilter, query, rows]);
 
   const trending = useMemo(
     () =>
@@ -128,7 +128,7 @@ export function LendingOverview() {
               const params = new URLSearchParams();
               if (query.trim()) params.set("q", query.trim());
               if (chainFilter !== "all") params.set("chain", chainFilter);
-              if (categoryFilter !== "all") params.set("protocol", categoryFilter);
+              if (protocolFilter !== "all") params.set("protocol", protocolFilter);
               if (assetTypeFilter !== "all") params.set("type", assetTypeFilter);
               router.push(`/lending/markets${params.size ? `?${params.toString()}` : ""}`);
             }}
@@ -155,11 +155,11 @@ export function LendingOverview() {
             </select>
           </label>
           <label className="chip-select">
-            <span>Categories</span>
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+            <span>Protocols</span>
+            <select value={protocolFilter} onChange={(event) => setProtocolFilter(event.target.value)}>
               <option value="all">All</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>{category}</option>
+              {protocols.map((protocol) => (
+                <option key={protocol} value={protocol}>{protocol}</option>
               ))}
             </select>
           </label>

@@ -10,7 +10,7 @@ import type {
 import type { AdapterVersion } from "./helpers/version";
 
 export type LendingChainConfig = {
-  start: string;
+  start?: string;
   [key: string]: unknown;
 };
 

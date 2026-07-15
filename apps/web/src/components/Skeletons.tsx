@@ -55,6 +55,9 @@ export function MarketTableSkeleton({ rows = 8 }: { rows?: number }) {
           <span className="skeleton-line value" />
           <span className="skeleton-line value" />
           <span className="skeleton-line value" />
+          <span className="skeleton-line value" />
+          <span className="skeleton-line value" />
+          <span className="skeleton-line value" />
           <span className="skeleton-line chip" />
         </div>
       ))}

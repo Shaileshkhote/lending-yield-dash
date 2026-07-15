@@ -7,6 +7,9 @@ export type LendingMarket = {
   assetSymbol: string;
   assetAddress: string;
   supplyApy: number | null;
+  sevenDayApy?: number | null;
+  apySevenDayChange?: number | null;
+  thirtyDayApy?: number | null;
   borrowApy: number | null;
   rewardSupplyApy: number | null;
   rewardBorrowApy?: number | null;

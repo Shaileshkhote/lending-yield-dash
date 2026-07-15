@@ -590,8 +590,9 @@ function chainsForTarget(
     ? chainFilter
     : Object.keys(adapter.adapter);
   return requestedChains.filter((chain) => {
-    const config = adapter.adapter[chain];
-    return Boolean(config?.start && target >= config.start);
+    const historyStart =
+      adapter.dataAvailability.history?.startDateByChain[chain];
+    return Boolean(historyStart && target >= historyStart);
   });
 }
 

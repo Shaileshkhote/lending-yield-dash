@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 const ADAPTER_ALIASES: Record<string, string> = {
   aave: "aave-v3",
   "aave-v3": "aave-v3",
+  "aave-v4": "aave-v4",
   spark: "spark",
   compound: "compound-v3",
   "compound-v3": "compound-v3",

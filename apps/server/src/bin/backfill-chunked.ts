@@ -524,9 +524,10 @@ function buildWorkItems(
       ? chainFilter
       : Object.keys(adapter.adapter);
     for (const chain of requestedChains) {
-      const config = adapter.adapter[chain];
-      if (!config?.start) continue;
-      const chainDates = dates.filter((date) => date >= config.start);
+      const historyStart =
+        adapter.dataAvailability.history?.startDateByChain[chain];
+      if (!historyStart) continue;
+      const chainDates = dates.filter((date) => date >= historyStart);
       for (const chunk of chunkDatesByMonth(chainDates, chunkDays)) {
         workItems.push({ adapter, chain, dates: chunk });
       }
