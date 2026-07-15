@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatPct, formatSignedPct, formatUsd, marketHealth, poolLinks, type LendingMarket } from "../lib/api";
-import { ChainBadge } from "./ChainBadge";
 import { TokenLogo } from "./TokenLogo";
 
 type Props = {
@@ -71,7 +70,7 @@ export function MarketTable({ markets }: Props) {
                   <span className="asset-copy">
                   <strong>{market.assetSymbol}</strong>
                   <span>
-                    {market.protocol} <ChainBadge chain={market.chain} compact />
+                    {market.protocol}
                   </span>
                   </span>
                 </Link>

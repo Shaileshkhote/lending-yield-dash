@@ -204,7 +204,7 @@ select {
   place-items: center;
   flex: 0 0 auto;
   border-radius: 999px;
-  overflow: hidden;
+  overflow: visible;
   background:
     radial-gradient(circle at 30% 25%, rgb(255 255 255 / 58%), transparent 23%),
     conic-gradient(from 210deg, #20d7bd, #2467ff, #bb2cf4, #20d7bd);
@@ -235,6 +235,48 @@ select {
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
+}
+
+.token-network {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border: 2px solid #050505;
+  border-radius: 999px;
+  background: #181818;
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  overflow: hidden;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 45%);
+}
+
+.token-network-ticker {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+.token-network-market {
+  width: 17px;
+  height: 17px;
+}
+
+.token-network-hero {
+  top: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+}
+
+.token-network-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .token-ticker {
@@ -1125,30 +1167,32 @@ select {
 .chain-mark {
   display: inline-grid;
   place-items: center;
-  min-width: 34px;
+  width: 24px;
   height: 22px;
-  padding: 0 6px;
   border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 999px;
   background: #202020;
   color: #ffffff;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0;
+  overflow: hidden;
 }
 
-.chain-ethereum .chain-mark { background: #30364f; }
-.chain-base .chain-mark { background: #114ee8; }
-.chain-arbitrum .chain-mark { background: #1f4f7a; }
-.chain-optimism .chain-mark { background: #8f1111; }
-.chain-polygon .chain-mark { background: #5d2d91; }
-.chain-avalanche .chain-mark { background: #8f1f1f; }
-.chain-bsc .chain-mark { background: #7a5a10; }
-.chain-unichain .chain-mark { background: #7b2f71; }
-.chain-hyperevm .chain-mark { background: #155e4d; }
-.chain-katana .chain-mark { background: #4b5563; }
-.chain-worldchain .chain-mark { background: #222222; }
-.chain-stable .chain-mark { background: #275343; }
+.chain-mark.has-image {
+  border-color: rgb(255 255 255 / 18%);
+  background: #111111;
+}
+
+.chain-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chain-mark span {
+  padding: 0 4px;
+}
 
 .asset-stat-grid {
   display: grid;

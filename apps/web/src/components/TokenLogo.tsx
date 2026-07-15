@@ -2,22 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getAddress, isAddress } from "viem";
+import { TRUST_WALLET_CHAIN_SLUGS, chainMeta, trustWalletChainLogoUrl } from "../lib/chains";
 
 type TokenLogoProps = {
   symbol: string;
   chain?: string;
   address?: string;
   size?: "ticker" | "market" | "hero";
-};
-
-const TRUST_WALLET_CHAIN_SLUGS: Record<string, string> = {
-  ethereum: "ethereum",
-  base: "base",
-  arbitrum: "arbitrum",
-  optimism: "optimism",
-  polygon: "polygon",
-  avalanche: "avalanchec",
-  bsc: "smartchain",
+  showNetwork?: boolean;
 };
 
 const SYMBOL_DEFAULTS: Record<string, { chain: string; address: string }> = {
@@ -43,17 +35,24 @@ const SYMBOL_DEFAULTS: Record<string, { chain: string; address: string }> = {
   },
 };
 
-export function TokenLogo({ symbol, chain, address, size = "market" }: TokenLogoProps) {
+export function TokenLogo({ symbol, chain, address, size = "market", showNetwork = true }: TokenLogoProps) {
   const [failed, setFailed] = useState(false);
+  const [networkFailed, setNetworkFailed] = useState(false);
   const slug = symbol.toLowerCase().replace(/[^a-z0-9]+/g, "");
   const src = useMemo(
     () => trustWalletLogoUrl({ symbol, chain, address }),
     [address, chain, symbol],
   );
+  const networkSrc = useMemo(() => trustWalletChainLogoUrl(chain), [chain]);
+  const network = chain ? chainMeta(chain) : null;
 
   useEffect(() => {
     setFailed(false);
   }, [src]);
+
+  useEffect(() => {
+    setNetworkFailed(false);
+  }, [networkSrc]);
 
   return (
     <span
@@ -70,6 +69,22 @@ export function TokenLogo({ symbol, chain, address, size = "market" }: TokenLogo
           src={src}
           onError={() => setFailed(true)}
         />
+      ) : null}
+      {showNetwork && chain ? (
+        <span className={`token-network token-network-${size}`} aria-label={network?.label ?? chain} title={network?.label ?? chain}>
+          {networkSrc && !networkFailed ? (
+            <img
+              alt=""
+              className="token-network-image"
+              decoding="async"
+              loading="lazy"
+              src={networkSrc}
+              onError={() => setNetworkFailed(true)}
+            />
+          ) : (
+            <span>{network?.short.slice(0, 3) ?? chain.slice(0, 3).toUpperCase()}</span>
+          )}
+        </span>
       ) : null}
     </span>
   );
