@@ -1,60 +1,120 @@
-# LendingScope Analytics
+# LendingScope
 
-Adapter-first lending analytics prototype for open lending markets. The backend is a single NestJS server that runs protocol adapters, stores raw and canonical lending snapshots in Postgres, executes quality checks, and materializes public JSON to Cloudflare R2-compatible object storage. The frontend is a Next.js dashboard.
+Open lending market intelligence built around protocol adapters, daily historical storage, and fast materialized JSON reads.
 
-## Architecture
+LendingScope collects lending market state from public protocol data sources, normalizes it into one canonical schema, stores the source-of-truth history in Postgres, and publishes dashboard-friendly JSON files to local cache or Cloudflare R2. The frontend is a Next.js dashboard that reads the NestJS API and materialized cache.
+
+## What This Project Does
+
+- Tracks current and historical lending markets across Aave V3, Aave V4, Spark, Compound V3, and Morpho Blue.
+- Stores daily market snapshots with APY, supplied liquidity, borrowed liquidity, utilization, status, provenance, and quality score.
+- Keeps adapters self-contained, so each protocol owns its source config and normalization logic.
+- Separates ingestion from materialization: one job writes Postgres, another job publishes read-optimized JSON.
+- Serves a dashboard with protocol, chain, asset, market detail, chart, methodology, and source views.
+
+## System Overview
 
 ```mermaid
 flowchart LR
-  Core["packages/core\ncontracts, hashing"] --> Adapters["packages/adapters\nAave, Spark, Compound, Morpho"]
-  Core --> Server["apps/server\nNestJS API + scheduler"]
+  Sources["Protocol sources\nSubgraphs, GraphQL APIs, Dune, RPC"] --> Adapters["packages/adapters\nProtocol adapters"]
+  Core["packages/core\nCanonical types, hashing"] --> Adapters
+  Adapters --> Server["apps/server\nNestJS API, crons, runner"]
+  Quality["packages/quality\nchecks and scoring"] --> Server
   DbPkg["packages/db\nPrisma schema/client"] --> Server
-  Quality["packages/quality\nchecks + scoring"] --> Server
-  Adapters --> Server
   Server --> Postgres["Postgres\nsource of truth"]
-  Server --> R2["Cloudflare R2\nJSON cache"]
-  R2 --> Web["apps/web\nReact dashboard"]
+  Postgres --> Materializer["Materializer\ncache builder"]
+  Materializer --> R2["Cloudflare R2 or local JSON"]
+  R2 --> Web["apps/web\nNext.js dashboard"]
   Server --> Web
 ```
 
-Package boundaries:
+Postgres is the source of truth. R2/local JSON is a public read cache.
+
+## Repository Layout
 
 ```txt
-packages/adapters = protocol-specific collection and normalization
-packages/core     = canonical contracts, hashing
-packages/db       = Prisma schema and client export
-packages/quality  = reusable checks and scoring
-apps/server       = scheduling, orchestration, persistence, APIs, R2 materialization
-apps/web          = lending dashboard
+apps/
+  server/        NestJS API, schedulers, ingestion runner, materializer
+  web/           Next.js dashboard
+
+packages/
+  adapters/      Protocol-specific adapters and shared adapter helpers
+  core/          Canonical lending types and hashing helpers
+  db/            Prisma schema, migrations, Prisma client export
+  quality/       Reusable market quality checks and scoring
+
+docs/            Architecture, data model, adapter, API, and ops docs
+scripts/         Repo-level Prisma and test wrappers
 ```
 
-The adapter package is intentionally internal for v1. It can be extracted later if adapters need independent release/version ownership.
+## Documentation
 
-## What Is Implemented
+- [Concepts](docs/concepts.md)
+- [Architecture](docs/architecture.md)
+- [Working Locally](docs/working-locally.md)
+- [Adapters](docs/adapters.md)
+- [Data Model](docs/data-model.md)
+- [Ingestion And Materialization](docs/ingestion-and-materialization.md)
+- [API](docs/api.md)
+- [Frontend](docs/frontend.md)
+- [Deployment And Operations](docs/deployment-and-ops.md)
 
-- Monorepo with `apps/server`, `apps/web`, `packages/adapters`, `packages/core`, `packages/db`, and `packages/quality`.
-- MVP adapters for `aave-v3`, `aave-v4`, `spark`, `compound-v3`, and `morpho-blue`.
-- Self-contained protocol adapters that fetch market state from protocol sources and normalize it into a shared lending schema.
-- Prisma/Postgres models for ingestion runs, raw payloads, canonical snapshots, quality checks, materialization runs, and R2 objects.
-- Hourly NestJS scheduler using `@nestjs/schedule`.
-- Manual internal endpoints protected by `ADMIN_API_KEY`.
-- R2-compatible uploader using the AWS S3 SDK.
-- Local JSON cache writer for development when R2 env vars are absent.
-- React dashboard with overview, markets, detail, quality, and source provenance pages.
+## Quickstart
 
-The adapters follow the DefiLlama-style ownership model: each protocol module owns its deployment/source config, discovers markets from its configured source, collects raw payloads, and returns normalized metrics through the shared lending adapter contract. The NestJS runner only orchestrates adapters; it does not know protocol markets ahead of time.
+Requirements:
 
-## Setup
+- Node.js 22+
+- pnpm 10+
+- Docker, if running local Postgres
+- The Graph API key for subgraph-backed adapters
 
 ```bash
 pnpm install
 cp .env.example .env
 docker compose up -d postgres
 pnpm db:migrate
-pnpm build
+pnpm db:generate
+pnpm typecheck
 ```
 
-For local-only JSON cache, leave the R2 env vars empty. To upload materialized JSON to Cloudflare R2, set:
+Start the API and web app:
+
+```bash
+pnpm dev
+```
+
+Defaults:
+
+```txt
+API:  http://localhost:4000
+Web:  http://localhost:3000/lending
+```
+
+For local development without Cloudflare R2 credentials, the materializer writes JSON under `apps/server/public/data`.
+
+For a fuller local runbook, see [Working Locally](docs/working-locally.md).
+
+## Environment
+
+Core variables:
+
+```txt
+DATABASE_URL
+ADMIN_API_KEY
+PORT
+NEXT_PUBLIC_API_BASE_URL
+THE_GRAPH_API_KEY
+THE_GRAPH_GATEWAY_URL
+```
+
+Optional RPC variables are used to resolve historical UTC dates to block numbers during backfills:
+
+```txt
+ETHEREUM_RPC_URL
+BASE_RPC_URL
+```
+
+Optional R2 variables enable public cache uploads:
 
 ```txt
 R2_ACCOUNT_ID
@@ -65,79 +125,85 @@ R2_BUCKET
 R2_PUBLIC_BASE_URL
 ```
 
-`R2_ENDPOINT_URL` is the authenticated S3-compatible endpoint used for writes. `R2_PUBLIC_BASE_URL` must be a public R2 custom domain or `r2.dev` URL used by browsers; do not set it to the `r2.cloudflarestorage.com` S3 endpoint.
+`R2_ENDPOINT_URL` is the authenticated S3-compatible endpoint used by the server. `R2_PUBLIC_BASE_URL` must be a browser-readable custom domain or `r2.dev` URL.
 
-The shipped adapters are subgraph-only. Historical/date backfills still need an RPC endpoint to resolve UTC dates to block numbers; the CLI falls back to public RPCs when these are empty:
+See [.env.example](.env.example) for the full list.
 
-```txt
-ETHEREUM_RPC_URL
-BASE_RPC_URL
-```
-
-The Graph is required for the shipped subgraph-backed adapters:
-
-```txt
-THE_GRAPH_API_KEY
-THE_GRAPH_GATEWAY_URL
-AAVE_V3_ETHEREUM_SUBGRAPH_ID
-AAVE_V3_BASE_SUBGRAPH_ID
-SPARK_ETHEREUM_SUBGRAPH_ID
-COMPOUND_V3_ETHEREUM_SUBGRAPH_ID
-COMPOUND_V3_BASE_SUBGRAPH_ID
-```
-
-Adapters are source-specific rather than fallback-based. The current MVP uses GraphQL subgraphs for all three protocols. Future adapters can use API, GraphQL, RPC, or Dune by adding a source-specific helper and wiring the protocol adapter directly to that helper.
-
-## Run
-
-Start both apps during development:
+## Main Commands
 
 ```bash
-pnpm dev
+pnpm dev                  # Run API and web dev servers
+pnpm dev:server           # Run only NestJS API
+pnpm dev:web              # Run only Next.js
+pnpm build                # Build all workspace packages
+pnpm typecheck            # Typecheck all workspace packages
+pnpm test                 # Run unit tests
+
+pnpm db:migrate           # Local Prisma migration
+pnpm db:deploy            # Deploy Prisma migrations
+pnpm db:generate          # Generate Prisma client
+
+pnpm ingest               # Run current adapter ingestion once
+pnpm materialize          # Build full local/R2 JSON cache
+pnpm materialize:current  # Build current-lite cache only
+pnpm r2:clear             # Delete configured R2 lending prefix
+pnpm history -- latest    # Fetch adapter data for latest/current
+pnpm backfill:daily       # Backfill one date range day-by-day
+pnpm backfill:chunked     # Backfill by adapter/chain/date chunks
 ```
 
-Manual ingestion and materialization:
-
-```bash
-pnpm ingest
-pnpm materialize
-```
-
-Fetch historical snapshots for specific UTC dates:
-
-```bash
-pnpm history -- 2026-07-12 2026-07-13
-```
-
-The NestJS API defaults to:
+## How Data Flows
 
 ```txt
-http://localhost:4000
+adapter source fetch
+  -> raw payload with source method and payload hash
+  -> canonical market snapshot
+  -> quality checks and score
+  -> Postgres tables
+  -> daily snapshot projection
+  -> materialized JSON files
+  -> API/dashboard reads
 ```
 
-The Next.js dashboard defaults to:
+Daily snapshots power historical charts and current market rows. Current rows filter out markets with `totalSuppliedUsd <= 10000`.
+
+## Crons
+
+The NestJS server has two independent daily crons:
 
 ```txt
-http://localhost:3000/lending
+01:05 UTC  ingestion cron       adapter runner -> Postgres
+01:35 UTC  materializer cron    Postgres -> local JSON/R2
 ```
 
-The web app is served separately during development and can be deployed independently.
+Disable both with:
 
-## API
+```txt
+DISABLE_SCHEDULER=1
+```
 
-Public lending endpoints:
+Disable only one side:
+
+```txt
+DISABLE_INGESTION_SCHEDULER=1
+DISABLE_MATERIALIZER_SCHEDULER=1
+```
+
+## Public API
 
 ```txt
 GET /api/lending/manifest
 GET /api/lending/markets/current
-GET /api/lending/markets/:marketId/history?range=7d|30d|90d
+GET /api/lending/protocols/:protocol
+GET /api/lending/protocols/:protocol/timeseries?range=30d|90d|365d|all&year=2026
+GET /api/lending/protocols/:protocol/pools/:marketId/chart?range=30d|all&year=2026
+GET /api/lending/chains/:chain
+GET /api/lending/assets/:asset
+GET /api/lending/markets/:marketId/history?range=30d|90d|365d|all
 GET /api/lending/rankings?asset=USDC&sort=supplyApy
 GET /api/lending/quality
 GET /api/lending/anomalies
 GET /api/lending/sources/:marketId
-GET /api/lending/protocols/:protocol
-GET /api/lending/chains/:chain
-GET /api/lending/assets/:asset
 ```
 
 Internal endpoints require `x-admin-api-key: $ADMIN_API_KEY`:
@@ -149,42 +215,66 @@ GET /api/internal/ingestion-runs
 GET /api/internal/raw-payload/:id
 ```
 
-## R2 JSON Keys
+## Materialized Cache Layout
 
-The materializer writes local cache files under `apps/server/public/data` and uploads the same object bodies to R2 when configured:
+The materializer writes files under `lending/` locally and to R2 when configured:
 
 ```txt
 lending/manifest.json
 lending/current.json
+lending/current-lite.json
 lending/quality.json
 lending/anomalies.json
-lending/protocols/aave-v3.json
-lending/protocols/aave-v4.json
-lending/protocols/spark.json
-lending/protocols/compound-v3.json
-lending/protocols/morpho-blue.json
-lending/chains/ethereum.json
-lending/chains/base.json
-lending/assets/usdc.json
-lending/markets/{marketId}/history-30d.json
+lending/protocols/{protocol}/manifest.json
+lending/protocols/{protocol}/current.json
+lending/protocols/{protocol}/pools/{marketId}/current.json
+lending/protocols/{protocol}/pools/{marketId}/chart-30d.json
+lending/protocols/{protocol}/pools/{marketId}/chart-1d/{year}.json
+lending/chains/{chain}.json
+lending/assets/{asset}.json
 ```
 
-Postgres is the source of truth. R2 is only the public read cache.
+The API also keeps a short memory cache for hot public reads.
 
 ## Validation
 
+Use this before pushing:
+
 ```bash
-pnpm test
 pnpm typecheck
+pnpm test
+pnpm --filter @lendingscope/web build
 ```
 
-Current focused tests cover adapter normalization, canonical schema validation, APY/unit behavior, and quality scoring checks.
+Adapter-specific latest/date checks:
 
-## Source Notes
+```bash
+pnpm test aave latest
+pnpm test aave-v4 2026-07-15
+pnpm test spark 2026-07-15
+pnpm test compound 2026-07-15
+pnpm test morpho 2026-07-15
+```
 
-- Aave V3: discovers reserves and fetches current reserve state from official Aave V3 subgraphs.
-- Spark: discovers markets and fetches state from the Spark Messari lending subgraph.
-- Compound III: discovers markets and fetches state from the Compound Messari lending subgraph.
-- Shared source helpers are intentionally small and explicit. A protocol adapter should choose one source path for a run; do not silently fall back between API, GraphQL, RPC, or Dune inside the adapter.
+These commands run the history CLI for the selected adapter.
 
-Keep the raw payload in `raw_market_snapshots.payloadJson`, then normalize into `market_snapshots`. This preserves provenance, replayability, and quality auditing.
+## Current Status
+
+Implemented adapters:
+
+- `aave-v3`
+- `aave-v4`
+- `spark`
+- `compound-v3`
+- `morpho-blue`
+
+Current storage strategy:
+
+- Raw/current ingestion rows are retained for provenance.
+- Daily snapshots are the compact historical source of truth.
+- Materialized JSON is generated from daily snapshots.
+- Full historical charts use yearly per-pool files to avoid giant protocol payloads.
+
+## License And Affiliation
+
+This is an independent technical prototype for open lending analytics, built from public protocol data. It is not affiliated with any analytics platform or protocol.
