@@ -66,7 +66,7 @@ export function MarketDetailPage() {
     () =>
       history.map((point) => ({
         ...point,
-        date: new Date(point.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        date: point.timestamp,
         supplyApy: point.apyBase ?? point.supplyApy,
         netSupplyApy: point.apy ?? point.netSupplyApy,
         chartApy: point.apy ?? point.netSupplyApy ?? point.apyBase ?? point.supplyApy ?? market?.netSupplyApy ?? market?.supplyApy,
@@ -161,11 +161,20 @@ export function MarketDetailPage() {
             <ResponsiveContainer width="100%" height={chartHeight}>
               <ComposedChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
                 <CartesianGrid stroke="#171717" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={chartRange === "1y" || chartRange === "all" ? 34 : 18} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: "#777", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  minTickGap={chartRange === "1y" || chartRange === "all" ? 28 : 18}
+                  interval="preserveStartEnd"
+                  tickFormatter={(value) => formatChartAxisDate(String(value), chartRange)}
+                />
                 <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
                 <Tooltip
                   contentStyle={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 12, color: "#fff" }}
                   formatter={(value) => [activeChart.format(Number(value)), activeChart.label]}
+                  labelFormatter={(label) => formatChartTooltipDate(String(label))}
                 />
                 {activeChart.kind === "bar" ? (
                   <Bar dataKey={activeChart.dataKey} fill="#564cff" radius={[5, 5, 0, 0]} maxBarSize={28} />
@@ -315,6 +324,30 @@ function formatSignedPct(value: number | null | undefined): string | null {
 
 function chartRangeLabel(range: ChartRange): string {
   return range === "all" ? "All" : range;
+}
+
+function formatChartAxisDate(value: string, range: ChartRange): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  if (range === "all" || range === "1y") {
+    return date.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" });
+  }
+  if (range === "90d") {
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+function formatChartTooltipDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  });
 }
 
 function getChartConfig(metric: ChartMetric): {

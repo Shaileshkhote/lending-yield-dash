@@ -862,40 +862,12 @@ select {
   transform: scale(0.98);
 }
 
-.dataset-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 35px;
-  border-bottom: 1px solid #1f1f1f;
-  background: #0d0d0d;
-  color: #828282;
-  font-size: 13px;
-}
-
-.status-spinner {
-  width: 13px;
-  height: 13px;
-  border: 1.5px solid #3b3b3b;
-  border-top-color: #d9d9d9;
-  border-radius: 999px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .filter-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 24px;
-  border-bottom: 1px solid #1b1b1b;
+  padding: 16px 24px 8px;
 }
 
 .table-search {
@@ -923,17 +895,6 @@ select {
   color: #8a8a8a;
 }
 
-.view-button,
-.chip-select {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  border: 1px solid #303030;
-  border-radius: 999px;
-  background: #101010;
-  color: #f1f1f1;
-}
-
 .filters input {
   height: 36px;
   min-width: 180px;
@@ -949,99 +910,106 @@ select {
   color: #777;
 }
 
-.view-button {
-  gap: 7px;
-  padding: 0 14px;
-  cursor: pointer;
-}
-
-.view-button.active {
-  border-color: #575757;
-  background: #1a1a1a;
-}
-
-.chip-row {
+.filter-pill-row {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 0 24px 15px;
-}
-
-.chip-select {
-  position: relative;
+  align-items: center;
   gap: 8px;
-  min-width: 154px;
-  padding: 0 34px 0 13px;
-  font-size: 13px;
+  padding: 0 24px 16px;
 }
 
-.chip-select span {
-  flex: 0 0 auto;
-  color: #858585;
+.pretty-filter {
+  position: relative;
+  z-index: 6;
+}
+
+.pretty-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #2f2f2f;
+  border-radius: 999px;
+  background: #101010;
+  color: #f1f1f1;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 16px;
+  white-space: nowrap;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 22%);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.pretty-filter-trigger:hover,
+.pretty-filter-trigger.open {
+  border-color: #515151;
+  background: #181818;
+}
+
+.pretty-filter-trigger b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #222222;
+  color: #ffffff;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
 }
 
-.chip-select select {
-  width: 100%;
-  min-width: 0;
-  max-width: 150px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  appearance: none;
-  background: transparent;
-  color: #ffffff;
-  font-size: 13px;
-  cursor: pointer;
+.pretty-filter-trigger svg {
+  transition: transform 160ms ease;
 }
 
-.chip-select::after {
-  content: "";
+.pretty-filter-trigger.open svg {
+  transform: rotate(180deg);
+}
+
+.filter-popover {
   position: absolute;
-  right: 13px;
-  top: 50%;
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid #ffffff;
-  border-bottom: 1.5px solid #ffffff;
-  transform: translateY(-65%) rotate(45deg);
-  pointer-events: none;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  width: 220px;
+  max-height: min(420px, calc(100vh - 220px));
+  padding: 0;
+  border: 1px solid #282828;
+  border-radius: 14px;
+  background: #0d0d0d;
+  color: #ffffff;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+  overflow: hidden;
 }
 
-.filter-drawer {
-  display: grid;
-  gap: 18px;
-  padding: 18px 24px 20px;
-  border-bottom: 1px solid #1f1f1f;
-  background: #101010;
+.filter-popover.wide {
+  width: 320px;
 }
 
-.filter-section {
-  display: grid;
-  gap: 11px;
-}
-
-.filter-section-head {
+.match-mode-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  color: #f1f1f1;
-  font-size: 13px;
-  font-weight: 700;
+  gap: 10px;
+  padding: 12px 12px 8px;
+}
+
+.match-mode-row > span {
+  color: #8b8b8b;
+  font-size: 12px;
 }
 
 .mode-toggle {
   display: inline-flex;
   align-items: center;
   padding: 2px;
-  border: 1px solid #2c2c2c;
   border-radius: 999px;
-  background: #0b0b0b;
+  border: 0;
+  background: #1b1b1b;
 }
 
 .mode-toggle button {
@@ -1050,81 +1018,155 @@ select {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #777777;
+  color: #8a8a8a;
   cursor: pointer;
   font-size: 11px;
   font-weight: 750;
+  text-transform: lowercase;
 }
 
 .mode-toggle button.active {
   background: #ffffff;
   color: #050505;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 25%);
 }
 
-.filter-options {
+.dropdown-scroll {
+  max-height: 180px;
+  padding: 4px 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.dropdown-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.dropdown-option {
   display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-}
-
-.filter-chip {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid #2d2d2d;
-  border-radius: 999px;
-  background: #0c0c0c;
-  color: #d8d8d8;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 560;
-  text-transform: capitalize;
-}
-
-.filter-chip:hover {
-  border-color: #4a4a4a;
-}
-
-.filter-chip.selected {
-  border-color: #ffffff;
-  background: #ffffff;
-  color: #050505;
-}
-
-.filter-actions {
-  display: flex;
-  justify-content: flex-end;
   gap: 10px;
-  padding-top: 2px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 0;
+  background: transparent;
+  color: rgb(255 255 255 / 90%);
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  transition: background 140ms ease;
 }
 
-.filter-actions button,
-.filter-actions a {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 0 13px;
-  border: 1px solid #303030;
-  border-radius: 999px;
-  background: #0b0b0b;
+.dropdown-option:hover,
+.dropdown-option.selected {
+  background: rgb(255 255 255 / 6%);
+}
+
+.dropdown-option > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chain-filter-icon,
+.protocol-filter-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  background: #212121;
   color: #ffffff;
-  cursor: pointer;
-  font-size: 13px;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.protocol-filter-icon {
+  border-radius: 999px;
+}
+
+.range-dropdown {
+  display: grid;
+  gap: 22px;
+  padding: 16px 14px;
+}
+
+.range-control {
+  display: grid;
+  gap: 10px;
+}
+
+.range-control-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #f2f2f2;
+  font-size: 14px;
   font-weight: 650;
 }
 
-.filter-actions button:disabled {
-  color: #595959;
-  cursor: not-allowed;
+.range-inputs {
+  display: grid;
+  gap: 8px;
 }
 
-.filter-actions a {
-  border-color: #ffffff;
-  background: #ffffff;
-  color: #050505;
+.range-inputs input {
+  width: 100%;
+  accent-color: #ffffff;
+}
+
+.range-values {
+  color: #858585;
+  font-size: 13px;
+}
+
+.range-values strong {
+  margin-left: 4px;
+  color: #f5f5f5;
+  font-weight: 650;
+}
+
+.active-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 24px 14px;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 6px 0 9px;
+  border: 1px solid #303030;
+  border-radius: 999px;
+  background: transparent;
+  color: #f1f1f1;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.active-filter-chip:hover {
+  background: #171717;
+}
+
+.clear-filter-button {
+  min-height: 24px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: #f1f1f1;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .table-wrap {
@@ -2237,22 +2279,34 @@ select {
     width: 100%;
   }
 
-  .view-button {
-    justify-content: center;
-  }
-
-  .chip-row {
+  .filter-pill-row {
     padding: 0 14px 14px;
     overflow-x: auto;
     scrollbar-width: none;
   }
 
-  .chip-row::-webkit-scrollbar {
+  .filter-pill-row::-webkit-scrollbar {
     display: none;
   }
 
-  .chip-select {
+  .pretty-filter {
     flex: 0 0 auto;
+    position: static;
+  }
+
+  .filter-popover {
+    left: 14px;
+    right: 14px;
+    width: auto;
+    max-height: min(420px, calc(100vh - 180px));
+  }
+
+  .filter-popover.wide {
+    width: auto;
+  }
+
+  .active-filter-row {
+    padding: 0 14px 14px;
   }
 
   .table-wrap {
