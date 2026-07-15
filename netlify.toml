@@ -1,0 +1,6 @@
+[build]
+  command = "pnpm --filter @lendingscope/web build"
+  publish = "apps/web/.next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
