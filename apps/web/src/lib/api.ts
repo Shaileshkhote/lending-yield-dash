@@ -9,14 +9,17 @@ export type LendingMarket = {
   supplyApy: number | null;
   borrowApy: number | null;
   rewardSupplyApy: number | null;
+  rewardBorrowApy?: number | null;
   netSupplyApy: number | null;
   totalSuppliedUsd: number | null;
   totalBorrowedUsd: number | null;
   availableLiquidityUsd: number | null;
   utilization: number | null;
+  isActive?: boolean;
+  isPaused?: boolean;
   dataQualityScore: number;
   lastUpdated: string;
-  source: {
+  source?: {
     method: string;
     payloadHash: string;
     contracts: string[];

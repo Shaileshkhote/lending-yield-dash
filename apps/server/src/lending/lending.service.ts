@@ -7,6 +7,8 @@ import { MaterializerService } from "../materializer/materializer.service";
 @Injectable()
 export class LendingService {
   private readonly cacheBase = join(process.cwd(), "public", "data");
+  private readonly memoryCache = new Map<string, { expiresAt: number; value: unknown }>();
+  private readonly hotCacheTtlMs = 60_000;
 
   constructor(
     @Inject(PrismaService)
@@ -15,13 +17,22 @@ export class LendingService {
     private readonly materializer: MaterializerService
   ) {}
 
-  async cachedJson<T>(key: string, fallback?: () => Promise<T>): Promise<T> {
+  async cachedJson<T>(key: string, fallback?: () => Promise<T>, ttlMs = this.hotCacheTtlMs): Promise<T> {
+    const cached = this.memoryCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.value as T;
+    }
+
     try {
       const content = await readFile(join(this.cacheBase, key), "utf8");
-      return JSON.parse(content) as T;
+      const value = JSON.parse(content) as T;
+      this.setMemoryCache(key, value, ttlMs);
+      return value;
     } catch {
       if (fallback) {
-        return fallback();
+        const value = await fallback();
+        this.setMemoryCache(key, value, ttlMs);
+        return value;
       }
       throw new NotFoundException(`Cache file ${key} has not been materialized yet`);
     }
@@ -41,19 +52,17 @@ export class LendingService {
   }
 
   async current() {
-    return this.cachedJson("lending/current.json", () => this.materializer.currentMarkets());
+    return this.cachedJson("lending/current-lite.json", () => this.materializer.currentLiteMarkets());
   }
 
   async protocol(protocol: string) {
-    return this.cachedJson(`lending/protocols/${protocol}/current.json`, async () => {
-      const current = (await this.current()) as { data: Array<Record<string, unknown>> };
-      return {
-        generatedAt: new Date().toISOString(),
-        status: "success",
-        protocolSlug: protocol,
-        data: current.data.filter((row) => row.protocolSlug === protocol)
-      };
-    });
+    const current = (await this.current()) as { generatedAt: string; data: Array<Record<string, unknown>> };
+    return {
+      generatedAt: current.generatedAt,
+      status: "success",
+      protocolSlug: protocol,
+      data: current.data.filter((row) => row.protocolSlug === protocol)
+    };
   }
 
   async protocolTimeseries(protocol: string, range: string, year?: string) {
@@ -97,26 +106,22 @@ export class LendingService {
   }
 
   async chain(chain: string) {
-    return this.cachedJson(`lending/chains/${chain}.json`, async () => {
-      const current = (await this.current()) as { data: Array<Record<string, unknown>> };
-      return {
-        generatedAt: new Date().toISOString(),
-        status: "success",
-        data: current.data.filter((row) => row.chain === chain)
-      };
-    });
+    const current = (await this.current()) as { generatedAt: string; data: Array<Record<string, unknown>> };
+    return {
+      generatedAt: current.generatedAt,
+      status: "success",
+      data: current.data.filter((row) => row.chain === chain)
+    };
   }
 
   async asset(asset: string) {
     const normalizedAsset = asset.toLowerCase();
-    return this.cachedJson(`lending/assets/${normalizedAsset}.json`, async () => {
-      const current = (await this.current()) as { data: Array<Record<string, unknown>> };
-      return {
-        generatedAt: new Date().toISOString(),
-        status: "success",
-        data: current.data.filter((row) => String(row.assetSymbol).toLowerCase() === normalizedAsset)
-      };
-    });
+    const current = (await this.current()) as { generatedAt: string; data: Array<Record<string, unknown>> };
+    return {
+      generatedAt: current.generatedAt,
+      status: "success",
+      data: current.data.filter((row) => String(row.assetSymbol).toLowerCase() === normalizedAsset)
+    };
   }
 
   async history(marketId: string, range: string) {
@@ -137,13 +142,13 @@ export class LendingService {
   }
 
   async rankings(asset: string | undefined, sort: string | undefined) {
-    const current = (await this.current()) as { data: Array<Record<string, unknown>> };
+    const current = (await this.current()) as { generatedAt: string; data: Array<Record<string, unknown>> };
     const normalizedAsset = asset?.toLowerCase();
     const sortKey = sort ?? "supplyApy";
     const data = current.data
       .filter((row) => !normalizedAsset || String(row.assetSymbol).toLowerCase() === normalizedAsset)
       .sort((a, b) => Number(b[sortKey] ?? 0) - Number(a[sortKey] ?? 0));
-    return { generatedAt: new Date().toISOString(), status: "success", data };
+    return { generatedAt: current.generatedAt, status: "success", data };
   }
 
   async source(marketId: string) {
@@ -167,6 +172,13 @@ export class LendingService {
       },
       qualityChecks: snapshot.qualityChecks
     };
+  }
+
+  private setMemoryCache<T>(key: string, value: T, ttlMs: number) {
+    this.memoryCache.set(key, {
+      expiresAt: Date.now() + ttlMs,
+      value
+    });
   }
 }
 

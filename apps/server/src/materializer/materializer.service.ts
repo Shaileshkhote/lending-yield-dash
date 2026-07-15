@@ -46,6 +46,11 @@ type CurrentMarketRow = {
   };
 };
 
+type CurrentLiteMarketRow = Omit<
+  CurrentMarketRow,
+  "ltv" | "liquidationThreshold" | "reserveFactor" | "supplyCapUsd" | "borrowCapUsd" | "source"
+>;
+
 type DailySnapshotRow = {
   marketId: string;
   date: string;
@@ -106,6 +111,8 @@ type CurrentDailySnapshotRow = SnapshotLike & {
   sourcePayloadHash: string;
   sourceContracts: unknown;
 };
+
+type CurrentLiteDailySnapshotRow = SnapshotLike;
 
 type RangeSelection = number | "all";
 
@@ -375,6 +382,70 @@ export class MaterializerService {
     };
   }
 
+  async currentLiteMarkets(): Promise<{ generatedAt: string; status: "success"; data: CurrentLiteMarketRow[] }> {
+    const latest = await this.prisma.$queryRaw<CurrentLiteDailySnapshotRow[]>(Prisma.sql`
+      SELECT DISTINCT ON ("marketId")
+        "marketId",
+        "timestamp",
+        "blockNumber",
+        "protocol",
+        "adapterId",
+        "chain",
+        "marketType",
+        "assetSymbol",
+        "assetAddress",
+        "supplyApy",
+        "borrowApy",
+        "rewardSupplyApy",
+        "rewardBorrowApy",
+        "netSupplyApy",
+        "totalSuppliedUsd",
+        "totalBorrowedUsd",
+        "availableLiquidityUsd",
+        "utilization",
+        "isActive",
+        "isPaused",
+        "dataQualityScore"
+      FROM "DailyMarketSnapshot"
+      ORDER BY "marketId", "date" DESC, "timestamp" DESC
+    `);
+
+    return {
+      generatedAt: new Date().toISOString(),
+      status: "success",
+      data: latest.map((snapshot) => ({
+        marketId: snapshot.marketId,
+        protocol: snapshot.protocol,
+        protocolSlug: snapshot.adapterId,
+        chain: snapshot.chain,
+        marketType: snapshot.marketType,
+        assetSymbol: snapshot.assetSymbol,
+        assetAddress: snapshot.assetAddress,
+        supplyApy: snapshot.supplyApy,
+        borrowApy: snapshot.borrowApy,
+        rewardSupplyApy: snapshot.rewardSupplyApy,
+        rewardBorrowApy: snapshot.rewardBorrowApy,
+        netSupplyApy: snapshot.netSupplyApy,
+        totalSuppliedUsd: snapshot.totalSuppliedUsd,
+        totalBorrowedUsd: snapshot.totalBorrowedUsd,
+        availableLiquidityUsd: snapshot.availableLiquidityUsd,
+        utilization: snapshot.utilization,
+        isActive: snapshot.isActive,
+        isPaused: snapshot.isPaused,
+        dataQualityScore: snapshot.dataQualityScore,
+        lastUpdated: snapshot.timestamp.toISOString()
+      }))
+    };
+  }
+
+  async materializeCurrentLite(): Promise<{ generatedAt: string; files: number; markets: number }> {
+    const generatedAt = new Date().toISOString();
+    const current = await this.currentLiteMarkets();
+    current.generatedAt = generatedAt;
+    await this.writeLocalJson("lending/current-lite.json", current);
+    return { generatedAt, files: 1, markets: current.data.length };
+  }
+
   async marketHistory(marketId: string, range: RangeSelection) {
     const snapshots = await this.prisma.dailyMarketSnapshot.findMany({
       where: range === "all" ? { marketId } : { marketId, date: { gte: rangeStart(range) } },
@@ -574,6 +645,10 @@ export class MaterializerService {
     JSON.parse(body);
     await writeFile(tmp, body);
     await rename(tmp, path);
+  }
+
+  private async writeLocalJson(key: string, value: unknown) {
+    await this.writeLocal(key, `${JSON.stringify(value, null, 2)}\n`);
   }
 }
 

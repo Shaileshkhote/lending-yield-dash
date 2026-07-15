@@ -83,6 +83,7 @@ export function MarketDetailPage() {
   }, [chartData]);
 
   const borrowedShare = market?.totalSuppliedUsd ? ((market.totalBorrowedUsd ?? 0) / market.totalSuppliedUsd) * 100 : null;
+  const source = market?.source;
   const chartHeight = isCompactChart ? 360 : 430;
   const brushY = isCompactChart ? 292 : 348;
   const activeChart = useMemo(() => {
@@ -250,11 +251,11 @@ export function MarketDetailPage() {
           </div>
           <dl>
             <dt>Method</dt>
-            <dd>{market.source.method}</dd>
+            <dd>{source?.method ?? "Protocol subgraph snapshot"}</dd>
             <dt>Payload Hash</dt>
-            <dd>{market.source.payloadHash}</dd>
+            <dd>{source?.payloadHash ?? "Stored in daily market snapshot"}</dd>
             <dt>Contracts</dt>
-            <dd>{market.source.contracts.length ? market.source.contracts.join(", ") : market.assetAddress}</dd>
+            <dd>{source?.contracts?.length ? source.contracts.join(", ") : market.assetAddress}</dd>
           </dl>
         </section>
       </div>

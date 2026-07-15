@@ -31,9 +31,9 @@ export function SourcesPage() {
               <dt>Adapter</dt>
               <dd>{market.protocolSlug}</dd>
               <dt>Method</dt>
-              <dd>{market.source.method}</dd>
+              <dd>{market.source?.method ?? "Protocol subgraph snapshot"}</dd>
               <dt>Payload hash</dt>
-              <dd>{market.source.payloadHash}</dd>
+              <dd>{market.source?.payloadHash ?? "Stored in daily market snapshot"}</dd>
             </dl>
           </article>
         ))}

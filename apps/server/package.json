@@ -9,6 +9,7 @@
     "start": "tsx src/main.ts",
     "ingest": "tsx src/bin/ingest.ts",
     "materialize": "tsx src/bin/materialize.ts",
+    "materialize:current": "tsx src/bin/materialize-current.ts",
     "r2:clear": "tsx src/bin/clear-r2.ts",
     "project:daily": "tsx src/bin/project-daily.ts",
     "backfill:daily": "tsx src/bin/backfill-daily.ts",
