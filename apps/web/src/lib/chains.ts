@@ -34,6 +34,18 @@ export function trustWalletChainLogoUrl(chain?: string): string | null {
   return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${slug}/info/logo.png`;
 }
 
+export function chainLogoUrls(chain?: string): string[] {
+  if (!chain) return [];
+  return unique([
+    trustWalletChainLogoUrl(chain),
+    `https://icons.llamao.fi/icons/chains/rsz_${chain.toLowerCase()}?w=48&h=48`,
+  ]);
+}
+
+function unique(values: Array<string | null>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
 function titleCase(value: string): string {
   return value
     .split(/[-_\s]+/)
