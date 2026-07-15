@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Query } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Param, Query } from "@nestjs/common";
 import { LendingService } from "./lending.service";
 
 @Controller("/api/lending")
@@ -14,11 +14,13 @@ export class LendingController {
   }
 
   @Get("markets/current")
+  @Header("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
   current() {
     return this.lending.current();
   }
 
   @Get("protocols/:protocol")
+  @Header("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
   protocol(@Param("protocol") protocol: string) {
     return this.lending.protocol(protocol);
   }
@@ -53,11 +55,13 @@ export class LendingController {
   }
 
   @Get("chains/:chain")
+  @Header("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
   chain(@Param("chain") chain: string) {
     return this.lending.chain(chain);
   }
 
   @Get("assets/:asset")
+  @Header("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
   asset(@Param("asset") asset: string) {
     return this.lending.asset(asset);
   }
@@ -68,6 +72,7 @@ export class LendingController {
   }
 
   @Get("rankings")
+  @Header("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
   rankings(@Query("asset") asset?: string, @Query("sort") sort?: string) {
     return this.lending.rankings(asset, sort);
   }
