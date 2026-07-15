@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import { ArrowRight, Check, ChevronDown, Search, X } from "lucide-react";
-import { MarketTable } from "../components/MarketTable";
+import type { CSSProperties, ReactNode } from "react";
+import { ArrowRight, Check, ChevronDown, Columns3, Search, X } from "lucide-react";
+import { defaultMarketColumns, hideableMarketColumns, MarketTable, type MarketColumnKey } from "../components/MarketTable";
 import { LendingOverviewSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
+import { chainLogoUrls } from "../lib/chains";
 import { fetchJson, formatPct, formatSignedPct, formatUsd, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 import { assetTypeForMarket, assetTypeOptions } from "../lib/asset-types";
+import { tokenLogoUrls } from "../lib/token-icons";
 
 type FilterMode = "OR" | "AND";
-type DropdownKey = "chains" | "range" | "protocols" | "assetType";
+type DropdownKey = "chains" | "range" | "protocols" | "assetType" | "view";
 type RangeKey = "supplied" | "sevenDayApy" | "thirtyDayApy";
 type RangeTuple = [number, number];
 type RangeState = Partial<Record<RangeKey, RangeTuple>>;
@@ -24,6 +26,18 @@ const categoryTabs = [
 ];
 
 const knownProtocols = ["Aave V3", "Aave V4", "Compound III", "Morpho Blue", "Spark"];
+const protocolIconSlugs: Record<string, string> = {
+  "Aave V3": "aave",
+  "Aave V4": "aave",
+  "Compound III": "compound-finance",
+  "Morpho Blue": "morpho-blue",
+  Spark: "spark",
+};
+const assetTypeIconSymbols: Record<string, string> = {
+  stablecoins: "USDC",
+  bluechips: "WBTC",
+  alts: "AAVE",
+};
 const MIN_BENCHMARK_SUPPLIED_USD = 10_000;
 const MIN_REASONABLE_APY = -20;
 const MAX_REASONABLE_APY = 100;
@@ -40,6 +54,8 @@ export function LendingOverview() {
   const [selectedProtocols, setSelectedProtocols] = useState<string[]>([]);
   const [selectedAssetTypes, setSelectedAssetTypes] = useState<string[]>([]);
   const [rangeFilters, setRangeFilters] = useState<RangeState>({});
+  const [visibleColumns, setVisibleColumns] = useState<MarketColumnKey[]>(defaultMarketColumns);
+  const [columnSearch, setColumnSearch] = useState("");
 
   useEffect(() => {
     fetchJson<CurrentMarketsResponse>("/api/lending/markets/current").then(setData).catch((err) => setError(err.message));
@@ -87,6 +103,12 @@ export function LendingOverview() {
     [rangeBounds, rangeFilters]
   );
   const rangeFilterCount = (rangeFilters.supplied ? 1 : 0) + (rangeFilters.sevenDayApy ? 1 : 0) + (rangeFilters.thirtyDayApy ? 1 : 0);
+  const visibleColumnSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
+  const searchedColumns = useMemo(() => {
+    const normalized = columnSearch.trim().toLowerCase();
+    return hideableMarketColumns.filter((column) => (normalized ? column.label.toLowerCase().includes(normalized) : true));
+  }, [columnSearch]);
+  const hiddenColumnCount = hideableMarketColumns.filter((column) => !visibleColumnSet.has(column.key)).length;
   const filteredRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const visibleRows = rows.filter((row) => {
@@ -118,6 +140,9 @@ export function LendingOverview() {
   const updateRange = (key: RangeKey, value: RangeTuple) => {
     const normalized = normalizeRange(value, rangeBounds[key]);
     setRangeFilters((current) => (sameRange(normalized, rangeBounds[key]) ? omitRange(current, key) : { ...current, [key]: normalized }));
+  };
+  const toggleColumn = (key: MarketColumnKey) => {
+    setVisibleColumns((selected) => toggleValue(selected, key));
   };
   const activeFilters = useMemo<ActiveFilter[]>(() => {
     const filters: ActiveFilter[] = [];
@@ -221,103 +246,138 @@ export function LendingOverview() {
             </a>
           </div>
         </div>
-        <div className="filter-row">
-          <label className="table-search">
-            <Search size={16} />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by token or protocol" />
-          </label>
-        </div>
-        <div className="filter-pill-row" ref={filtersRef}>
-          <PrettyDropdown label="Chains" count={selectedChains.length} isOpen={openDropdown === "chains"} onToggle={() => setOpenDropdown((open) => (open === "chains" ? null : "chains"))}>
-            {selectedChains.length >= 2 ? (
-              <div className="match-mode-row">
-                <span>Match mode</span>
-                <ModeToggle mode={chainMode} onModeChange={setChainMode} />
+        <div ref={filtersRef}>
+          <div className="filter-row">
+            <label className="table-search">
+              <Search size={16} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by token or protocol" />
+            </label>
+            <PrettyDropdown
+              label="View"
+              count={hiddenColumnCount}
+              icon={<Columns3 size={15} />}
+              align="end"
+              isOpen={openDropdown === "view"}
+              onToggle={() => setOpenDropdown((open) => (open === "view" ? null : "view"))}
+            >
+              <label className="column-search">
+                <Search size={15} />
+                <input value={columnSearch} onChange={(event) => setColumnSearch(event.target.value)} placeholder="Search columns" />
+                {columnSearch ? (
+                  <button type="button" aria-label="Clear column search" onClick={() => setColumnSearch("")}>
+                    <X size={13} />
+                  </button>
+                ) : null}
+              </label>
+              <div className="dropdown-scroll column-dropdown-scroll">
+                {searchedColumns.length > 0 ? (
+                  searchedColumns.map((column) => {
+                    const selected = visibleColumnSet.has(column.key);
+                    return (
+                      <button key={column.key} className={selected ? "dropdown-option column-option selected" : "dropdown-option column-option"} type="button" onClick={() => toggleColumn(column.key)}>
+                        <span className="column-option-label">{column.label}</span>
+                        {selected ? <Check size={16} /> : null}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p className="dropdown-empty">No columns found</p>
+                )}
               </div>
-            ) : null}
-            <div className="dropdown-scroll">
-              {chains.map((chain) => (
-                <button
-                  key={chain}
-                  className={selectedChains.includes(chain) ? "dropdown-option selected" : "dropdown-option"}
-                  type="button"
-                  onClick={() => setSelectedChains((selected) => toggleValue(selected, chain))}
-                >
-                  <span className="chain-filter-icon">{chain.slice(0, 1).toUpperCase()}</span>
-                  <span>{chainLabel(chain)}</span>
-                  {selectedChains.includes(chain) ? <Check size={16} /> : null}
-                </button>
-              ))}
-            </div>
-          </PrettyDropdown>
-          <PrettyDropdown label="Range" count={rangeFilterCount} isOpen={openDropdown === "range"} wide onToggle={() => setOpenDropdown((open) => (open === "range" ? null : "range"))}>
-            <div className="range-dropdown">
-              <RangeControl
-                label="Total Supplied"
-                format={formatUsd}
-                bounds={rangeBounds.supplied}
-                value={currentRanges.supplied}
-                step={rangeStep(rangeBounds.supplied)}
-                onChange={(value) => updateRange("supplied", value)}
-              />
-              <RangeControl
-                label="7d APY Range"
-                format={formatPct}
-                bounds={rangeBounds.sevenDayApy}
-                value={currentRanges.sevenDayApy}
-                step={0.1}
-                onChange={(value) => updateRange("sevenDayApy", value)}
-              />
-              <RangeControl
-                label="30d APY Range"
-                format={formatPct}
-                bounds={rangeBounds.thirtyDayApy}
-                value={currentRanges.thirtyDayApy}
-                step={0.1}
-                onChange={(value) => updateRange("thirtyDayApy", value)}
-              />
-            </div>
-          </PrettyDropdown>
-          <PrettyDropdown label="Protocols" count={selectedProtocols.length} isOpen={openDropdown === "protocols"} onToggle={() => setOpenDropdown((open) => (open === "protocols" ? null : "protocols"))}>
-            {selectedProtocols.length >= 2 ? (
-              <div className="match-mode-row">
-                <span>Match mode</span>
-                <ModeToggle mode={protocolMode} onModeChange={setProtocolMode} />
-              </div>
-            ) : null}
-            <div className="dropdown-scroll">
-              {protocols.map((protocol) => (
-                <button
-                  key={protocol}
-                  className={selectedProtocols.includes(protocol) ? "dropdown-option selected" : "dropdown-option"}
-                  type="button"
-                  onClick={() => setSelectedProtocols((selected) => toggleValue(selected, protocol))}
-                >
-                  <span className="protocol-filter-icon">{protocol.slice(0, 1)}</span>
-                  <span>{protocol}</span>
-                  {selectedProtocols.includes(protocol) ? <Check size={16} /> : null}
-                </button>
-              ))}
-            </div>
-          </PrettyDropdown>
-          <PrettyDropdown label="Asset Type" count={selectedAssetTypes.length} isOpen={openDropdown === "assetType"} onToggle={() => setOpenDropdown((open) => (open === "assetType" ? null : "assetType"))}>
-            <div className="dropdown-scroll">
-              {assetTypeOptions
-                .filter((option) => option.value !== "all")
-                .map((option) => (
+            </PrettyDropdown>
+          </div>
+          <div className="filter-pill-row">
+            <PrettyDropdown label="Chains" count={selectedChains.length} isOpen={openDropdown === "chains"} onToggle={() => setOpenDropdown((open) => (open === "chains" ? null : "chains"))}>
+              {selectedChains.length >= 2 ? (
+                <div className="match-mode-row">
+                  <span>Match mode</span>
+                  <ModeToggle mode={chainMode} onModeChange={setChainMode} />
+                </div>
+              ) : null}
+              <div className="dropdown-scroll">
+                {chains.map((chain) => (
                   <button
-                    key={option.value}
-                    className={selectedAssetTypes.includes(option.value) ? "dropdown-option selected" : "dropdown-option"}
+                    key={chain}
+                    className={selectedChains.includes(chain) ? "dropdown-option selected" : "dropdown-option"}
                     type="button"
-                    onClick={() => setSelectedAssetTypes((selected) => toggleValue(selected, option.value))}
+                    onClick={() => setSelectedChains((selected) => toggleValue(selected, chain))}
                   >
-                    <span className="protocol-filter-icon">{option.label.slice(0, 1)}</span>
-                    <span>{option.label}</span>
-                    {selectedAssetTypes.includes(option.value) ? <Check size={16} /> : null}
+                    <FilterIcon alt={`${chainLabel(chain)} logo`} className="chain-filter-icon" fallback={chain.slice(0, 1).toUpperCase()} sources={chainLogoUrls(chain)} />
+                    <span>{chainLabel(chain)}</span>
+                    {selectedChains.includes(chain) ? <Check size={16} /> : null}
                   </button>
                 ))}
-            </div>
-          </PrettyDropdown>
+              </div>
+            </PrettyDropdown>
+            <PrettyDropdown label="Range" count={rangeFilterCount} isOpen={openDropdown === "range"} wide onToggle={() => setOpenDropdown((open) => (open === "range" ? null : "range"))}>
+              <div className="range-dropdown">
+                <RangeControl
+                  label="Total Supplied"
+                  format={formatUsd}
+                  bounds={rangeBounds.supplied}
+                  value={currentRanges.supplied}
+                  step={rangeStep(rangeBounds.supplied)}
+                  onChange={(value) => updateRange("supplied", value)}
+                />
+                <RangeControl
+                  label="7d APY Range"
+                  format={formatPct}
+                  bounds={rangeBounds.sevenDayApy}
+                  value={currentRanges.sevenDayApy}
+                  step={0.1}
+                  onChange={(value) => updateRange("sevenDayApy", value)}
+                />
+                <RangeControl
+                  label="30d APY Range"
+                  format={formatPct}
+                  bounds={rangeBounds.thirtyDayApy}
+                  value={currentRanges.thirtyDayApy}
+                  step={0.1}
+                  onChange={(value) => updateRange("thirtyDayApy", value)}
+                />
+              </div>
+            </PrettyDropdown>
+            <PrettyDropdown label="Protocols" count={selectedProtocols.length} isOpen={openDropdown === "protocols"} onToggle={() => setOpenDropdown((open) => (open === "protocols" ? null : "protocols"))}>
+              {selectedProtocols.length >= 2 ? (
+                <div className="match-mode-row">
+                  <span>Match mode</span>
+                  <ModeToggle mode={protocolMode} onModeChange={setProtocolMode} />
+                </div>
+              ) : null}
+              <div className="dropdown-scroll">
+                {protocols.map((protocol) => (
+                  <button
+                    key={protocol}
+                    className={selectedProtocols.includes(protocol) ? "dropdown-option selected" : "dropdown-option"}
+                    type="button"
+                    onClick={() => setSelectedProtocols((selected) => toggleValue(selected, protocol))}
+                  >
+                    <FilterIcon alt={`${protocol} logo`} className="protocol-filter-icon" fallback={protocol.slice(0, 1)} sources={protocolIconUrls(protocol)} />
+                    <span>{protocol}</span>
+                    {selectedProtocols.includes(protocol) ? <Check size={16} /> : null}
+                  </button>
+                ))}
+              </div>
+            </PrettyDropdown>
+            <PrettyDropdown label="Asset Type" count={selectedAssetTypes.length} isOpen={openDropdown === "assetType"} onToggle={() => setOpenDropdown((open) => (open === "assetType" ? null : "assetType"))}>
+              <div className="dropdown-scroll">
+                {assetTypeOptions
+                  .filter((option) => option.value !== "all")
+                  .map((option) => (
+                    <button
+                      key={option.value}
+                      className={selectedAssetTypes.includes(option.value) ? "dropdown-option selected" : "dropdown-option"}
+                      type="button"
+                      onClick={() => setSelectedAssetTypes((selected) => toggleValue(selected, option.value))}
+                    >
+                      <FilterIcon alt={`${option.label} icon`} className="asset-type-filter-icon" fallback={option.label.slice(0, 1)} sources={assetTypeIconUrls(option.value)} />
+                      <span>{option.label}</span>
+                      {selectedAssetTypes.includes(option.value) ? <Check size={16} /> : null}
+                    </button>
+                  ))}
+              </div>
+            </PrettyDropdown>
+          </div>
         </div>
         {activeFilters.length > 0 ? (
           <div className="active-filter-row">
@@ -349,7 +409,7 @@ export function LendingOverview() {
             ) : null}
           </div>
         ) : null}
-        <MarketTable markets={filteredRows} />
+        <MarketTable markets={filteredRows} visibleColumns={visibleColumns} />
         <div className="loaded-note">All {filteredRows.length} items loaded successfully</div>
       </section>
 
@@ -387,10 +447,29 @@ function MetricPanel({ title, value, change }: { title: string; value: string; c
   );
 }
 
-function PrettyDropdown({ label, count, isOpen, onToggle, children, wide = false }: { label: string; count: number; isOpen: boolean; onToggle: () => void; children: ReactNode; wide?: boolean }) {
+function PrettyDropdown({
+  label,
+  count,
+  isOpen,
+  onToggle,
+  children,
+  wide = false,
+  icon,
+  align = "start",
+}: {
+  label: string;
+  count: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+  wide?: boolean;
+  icon?: ReactNode;
+  align?: "start" | "end";
+}) {
   return (
-    <div className="pretty-filter">
+    <div className={align === "end" ? "pretty-filter align-end" : "pretty-filter"}>
       <button className={isOpen ? "pretty-filter-trigger open" : "pretty-filter-trigger"} type="button" aria-expanded={isOpen} onClick={onToggle}>
+        {icon}
         <span>{label}</span>
         {count > 0 ? <b>{count}</b> : null}
         <ChevronDown size={16} />
@@ -412,17 +491,35 @@ function ModeToggle({ mode, onModeChange }: { mode: FilterMode; onModeChange: (m
   );
 }
 
+function FilterIcon({ sources, fallback, alt, className }: { sources: string[]; fallback: string; alt: string; className: string }) {
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const sourceKey = sources.join("|");
+  const source = sources[sourceIndex];
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [sourceKey]);
+
+  return (
+    <span className={`${className}${source ? " has-image" : ""}`}>
+      {source ? <img alt={alt} decoding="async" loading="lazy" src={source} onError={() => setSourceIndex((index) => index + 1)} /> : <span>{fallback}</span>}
+    </span>
+  );
+}
+
 function RangeControl({ label, bounds, value, step, format, onChange }: { label: string; bounds: RangeTuple; value: RangeTuple; step: number; format: (value: number) => string; onChange: (value: RangeTuple) => void }) {
   const min = bounds[0];
   const max = bounds[1];
   const low = clamp(value[0], min, max);
   const high = clamp(value[1], min, max);
+  const lowPct = rangePercent(low, min, max);
+  const highPct = rangePercent(high, min, max);
   return (
     <div className="range-control">
       <div className="range-control-head">
         <span>{label}</span>
       </div>
-      <div className="range-inputs">
+      <div className="range-inputs" style={{ "--range-low": `${lowPct}%`, "--range-high": `${highPct}%` } as CSSProperties}>
         <input
           aria-label={`${label} minimum`}
           type="range"
@@ -512,6 +609,21 @@ function rangeStep(range: RangeTuple) {
   if (spread >= 1e6) return 10_000;
   if (spread >= 1e4) return 100;
   return 1;
+}
+
+function rangePercent(value: number, min: number, max: number) {
+  if (max <= min) return 0;
+  return ((value - min) / (max - min)) * 100;
+}
+
+function protocolIconUrls(protocol: string) {
+  const slug = protocolIconSlugs[protocol];
+  return slug ? [`https://icons.llamao.fi/icons/protocols/${slug}?w=48&h=48`] : [];
+}
+
+function assetTypeIconUrls(value: string) {
+  const symbol = assetTypeIconSymbols[value];
+  return symbol ? tokenLogoUrls({ symbol }) : [];
 }
 
 function chainLabel(chain: string) {
