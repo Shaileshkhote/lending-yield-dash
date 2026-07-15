@@ -25,6 +25,7 @@
     "r2:clear": "pnpm --filter @stablewatch-lending/server r2:clear",
     "project:daily": "pnpm --filter @stablewatch-lending/server project:daily",
     "backfill:daily": "pnpm --filter @stablewatch-lending/server backfill:daily",
+    "backfill:chunked": "pnpm --filter @stablewatch-lending/server backfill:chunked",
     "history": "pnpm --filter @stablewatch-lending/server history"
   },
   "devDependencies": {
