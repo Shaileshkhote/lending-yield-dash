@@ -1004,11 +1004,15 @@ select {
 }
 
 .q-degraded,
+.q-paused,
+.q-collateral,
 .fail {
   background: rgb(252 187 69 / 14%);
   color: #f0b848;
 }
 
+.q-inactive,
+.q-incomplete,
 .q-unreliable {
   background: rgb(255 63 102 / 14%);
   color: #ff3f66;

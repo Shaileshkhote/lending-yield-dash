@@ -27,8 +27,8 @@ export type LendingMarket = {
 };
 
 export type MarketHealth = {
-  label: "Healthy" | "Syncing" | "Degraded" | "Unreliable";
-  tone: "healthy" | "syncing" | "degraded" | "unreliable";
+  label: "Healthy" | "Syncing" | "Degraded" | "Incomplete" | "Inactive" | "Paused" | "Collateral Only";
+  tone: "healthy" | "syncing" | "degraded" | "incomplete" | "inactive" | "paused" | "collateral";
   reason: string;
 };
 
@@ -99,24 +99,37 @@ export function formatSignedPct(value: number | null | undefined): string {
 export function marketHealth(market: LendingMarket): MarketHealth {
   const updatedAt = Date.parse(market.lastUpdated);
   if (!Number.isFinite(updatedAt)) {
-    return { label: "Unreliable", tone: "unreliable", reason: "Missing update timestamp" };
+    return { label: "Incomplete", tone: "incomplete", reason: "Missing update timestamp" };
   }
 
   const ageHours = (Date.now() - updatedAt) / 36e5;
   const updatedToday = new Date(updatedAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
   const score = market.dataQualityScore ?? 0;
   const apy = market.netSupplyApy ?? market.supplyApy;
+  const borrowable = market.borrowApy !== null && market.borrowApy !== undefined;
 
   if (ageHours > 48) {
-    return { label: "Unreliable", tone: "unreliable", reason: `Last update is ${Math.floor(ageHours / 24)}d old` };
+    return { label: "Syncing", tone: "syncing", reason: `Last update is ${Math.floor(ageHours / 24)}d old` };
   }
   if (!updatedToday) {
     return { label: "Syncing", tone: "syncing", reason: "Latest daily snapshot is still syncing" };
   }
-  if (score < 50 || apy === null || apy === undefined || market.isActive === false) {
-    return { label: "Unreliable", tone: "unreliable", reason: "Current data is incomplete or inactive" };
+  if (market.isActive === false) {
+    return { label: "Inactive", tone: "inactive", reason: "Protocol marks this market inactive" };
   }
-  if (score < 80 || market.isPaused) {
+  if (market.isPaused) {
+    return { label: "Paused", tone: "paused", reason: "Protocol marks this market paused" };
+  }
+  if (!borrowable) {
+    return { label: "Collateral Only", tone: "collateral", reason: "Borrowing is not enabled for this market" };
+  }
+  if (apy === null || apy === undefined || market.totalSuppliedUsd === null || market.totalBorrowedUsd === null || market.utilization === null) {
+    return { label: "Incomplete", tone: "incomplete", reason: "Required APY or market-size fields are missing" };
+  }
+  if (score < 50) {
+    return { label: "Incomplete", tone: "incomplete", reason: "Quality score is below 50" };
+  }
+  if (score < 80) {
     return { label: "Degraded", tone: "degraded", reason: "Current data is available but has quality warnings" };
   }
   return { label: "Healthy", tone: "healthy", reason: "Current through today with clean checks" };
