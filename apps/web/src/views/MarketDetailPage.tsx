@@ -217,18 +217,22 @@ export function MarketDetailPage() {
               <span className="title-notch" />
               <span>Key Facts</span>
             </div>
-            <dl>
-              <dt>Protocol</dt>
-              <dd>{market.protocol}</dd>
-              <dt>Token</dt>
-              <dd><TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="ticker" />{market.assetSymbol}</dd>
-              <dt>Chain</dt>
-              <dd><ChainBadge chain={market.chain} /></dd>
-              <dt>Market Type</dt>
-              <dd>{market.marketType}</dd>
-              <dt>Status</dt>
-              <dd><span className={`quality q-${health?.tone ?? "unreliable"}`} title={health?.reason}>{health?.label}</span></dd>
-            </dl>
+            <div className="asset-fact-list">
+              <FactRow label="Protocol">{market.protocol}</FactRow>
+              <FactRow label="Token">
+                <span className="asset-fact-inline">
+                  <TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="ticker" />
+                  <span>{market.assetSymbol}</span>
+                </span>
+              </FactRow>
+              <FactRow label="Chain">
+                <ChainBadge chain={market.chain} />
+              </FactRow>
+              <FactRow label="Market Type">{formatMarketType(market.marketType)}</FactRow>
+              <FactRow label="Status">
+                <span className={`quality q-${health?.tone ?? "unreliable"}`} title={health?.reason}>{health?.label}</span>
+              </FactRow>
+            </div>
           </article>
 
           <article className="asset-info-card">
@@ -236,16 +240,13 @@ export function MarketDetailPage() {
               <span className="title-notch" />
               <span>Market Data</span>
             </div>
-            <dl>
-              <dt>Total Supplied</dt>
-              <dd>{formatUsd(market.totalSuppliedUsd)}</dd>
-              <dt>Total Borrowed</dt>
-              <dd>{formatUsd(market.totalBorrowedUsd)}</dd>
-              <dt>Available Liquidity</dt>
-              <dd>{formatUsd(market.availableLiquidityUsd)}</dd>
-              <dt>Utilization</dt>
-              <dd>{formatPct(borrowedShare ?? market.utilization)}</dd>
-            </dl>
+            <div className="asset-fact-list">
+              <FactRow label="Total Supplied">{formatUsd(market.totalSuppliedUsd)}</FactRow>
+              <FactRow label="Total Borrowed">{formatUsd(market.totalBorrowedUsd)}</FactRow>
+              <FactRow label="Available Liquidity">{formatUsd(market.availableLiquidityUsd)}</FactRow>
+              <FactRow label="Utilization">{formatPct(borrowedShare ?? market.utilization)}</FactRow>
+              <FactRow label="Updated">{formatUpdatedAt(market.lastUpdated)}</FactRow>
+            </div>
           </article>
         </section>
 
@@ -254,14 +255,11 @@ export function MarketDetailPage() {
             <span className="title-notch" />
             <span>Source Provenance</span>
           </div>
-          <dl>
-            <dt>Method</dt>
-            <dd>{source?.method ?? "Protocol on-chain events, subgraphs, or Dune data"}</dd>
-            <dt>Payload Hash</dt>
-            <dd>{source?.payloadHash ?? "Stored in daily market snapshot"}</dd>
-            <dt>Contracts</dt>
-            <dd>{source?.contracts?.length ? source.contracts.join(", ") : market.assetAddress}</dd>
-          </dl>
+          <div className="asset-fact-list">
+            <FactRow label="Method">{source?.method ?? "Protocol on-chain events, subgraphs, or Dune data"}</FactRow>
+            <FactRow label="Payload Hash" valueClassName="asset-fact-mono">{source?.payloadHash ?? "Stored in daily market snapshot"}</FactRow>
+            <FactRow label="Contracts" valueClassName="asset-fact-mono">{formatContracts(source?.contracts, market.assetAddress)}</FactRow>
+          </div>
         </section>
       </div>
 
@@ -297,6 +295,15 @@ export function MarketDetailPage() {
           </div>
         </article>
       </aside>
+    </div>
+  );
+}
+
+function FactRow({ label, children, valueClassName }: { label: string; children: ReactNode; valueClassName?: string }) {
+  return (
+    <div className="asset-fact-row">
+      <span className="asset-fact-label">{label}</span>
+      <span className={`asset-fact-value${valueClassName ? ` ${valueClassName}` : ""}`}>{children}</span>
     </div>
   );
 }
@@ -359,4 +366,33 @@ function getChartConfig(metric: ChartMetric): {
   if (metric === "supplied") return { dataKey: "chartSuppliedUsd", label: "Total Supplied", format: formatUsd, kind: "bar" };
   if (metric === "borrowed") return { dataKey: "chartBorrowedUsd", label: "Borrowed", format: formatUsd, kind: "bar" };
   return { dataKey: "chartApy", label: "APY", format: (value) => `${value.toFixed(2)}%`, kind: "line" };
+}
+
+function formatMarketType(value: string): string {
+  return value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
+    .join(" ");
+}
+
+function formatUpdatedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  });
+}
+
+function formatContracts(contracts: unknown, fallback: string): string {
+  if (Array.isArray(contracts) && contracts.length) {
+    return contracts.map(String).join(", ");
+  }
+  if (typeof contracts === "string" && contracts.length) {
+    return contracts;
+  }
+  return fallback;
 }
