@@ -90,7 +90,9 @@ export async function queryGraphqlEndpoint<T>(args: {
     } catch (error) {
       lastError = error;
       if (attempt === attempts) break;
-      await sleep(retryDelayMs(undefined, attempt));
+      const delayMs = retryDelayMs(undefined, attempt);
+      logGraphqlRetry(source, attempt, attempts, delayMs, errorMessage(error));
+      await sleep(delayMs);
       continue;
     }
 
@@ -103,7 +105,9 @@ export async function queryGraphqlEndpoint<T>(args: {
     }
 
     if (!isRetryableGraphqlError(result) || attempt === attempts) break;
-    await sleep(retryDelayMs(result, attempt));
+    const delayMs = retryDelayMs(result, attempt);
+    logGraphqlRetry(source, attempt, attempts, delayMs, graphqlResultMessage(result));
+    await sleep(delayMs);
   }
 
   if (!lastResult) {
@@ -282,6 +286,27 @@ function endpointMinIntervalMs(endpoint: string): number {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function graphqlResultMessage(result: GraphqlResult<unknown>): string {
+  return (
+    result.json.errors?.map((error) => error.message).join(" | ") ||
+    result.statusText ||
+    `HTTP ${result.status}`
+  );
+}
+
+function logGraphqlRetry(
+  source: string,
+  attempt: number,
+  attempts: number,
+  delayMs: number,
+  message: string,
+): void {
+  if (process.env.GRAPHQL_LOG_RETRIES !== "1") return;
+  console.warn(
+    `[graphql] ${source} retry ${attempt}/${attempts} in ${delayMs}ms: ${message}`,
+  );
 }
 
 function envPositiveInt(name: string, fallback: number): number {
