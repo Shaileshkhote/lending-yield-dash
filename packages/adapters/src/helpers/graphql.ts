@@ -3,6 +3,16 @@ type GraphqlResponse<T> = {
   errors?: Array<{ message: string }>;
 };
 
+type GraphqlResult<T> = {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  retryAfterMs?: number;
+  json: GraphqlResponse<T>;
+};
+
+const endpointPaces = new Map<string, Promise<void>>();
+
 export function graphApiKey(): string | undefined {
   return process.env.THE_GRAPH_API_KEY?.trim() || undefined;
 }
@@ -70,7 +80,7 @@ export async function queryGraphqlEndpoint<T>(args: {
   const body = JSON.stringify({ query: args.query, variables: args.variables ?? {} });
   const source = args.name ?? args.endpoint;
   const attempts = envPositiveInt("GRAPHQL_RETRIES", 3);
-  let lastResult: Awaited<ReturnType<typeof requestGraphql<T>>> | undefined;
+  let lastResult: GraphqlResult<T> | undefined;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = await requestGraphql<T>(args.endpoint, body, args.headers);
@@ -83,7 +93,7 @@ export async function queryGraphqlEndpoint<T>(args: {
     }
 
     if (!isRetryableGraphqlError(result) || attempt === attempts) break;
-    await sleep(envNonNegativeInt("GRAPHQL_RETRY_BASE_MS", 1_000) * attempt);
+    await sleep(retryDelayMs(result, attempt));
   }
 
   if (!lastResult) {
@@ -142,7 +152,12 @@ async function paginateGraphql<TData, TItem>(args: {
   return { items, lastData };
 }
 
-async function requestGraphql<T>(endpoint: string, body: string, headers: Record<string, string> = {}) {
+async function requestGraphql<T>(
+  endpoint: string,
+  body: string,
+  headers: Record<string, string> = {},
+): Promise<GraphqlResult<T>> {
+  await paceEndpoint(endpoint);
   const requestSleepMs = envNonNegativeInt("GRAPHQL_REQUEST_SLEEP_MS", 0);
   if (requestSleepMs > 0) {
     await sleep(requestSleepMs);
@@ -167,6 +182,7 @@ async function requestGraphql<T>(endpoint: string, body: string, headers: Record
     ok: response.ok,
     status: response.status,
     statusText: response.statusText,
+    retryAfterMs: retryAfterMs(response.headers.get("retry-after")),
     json
   };
 }
@@ -194,6 +210,61 @@ function isRetryableGraphqlError(result: {
     message.includes("timeout") ||
     message.includes("temporarily unavailable")
   );
+}
+
+function retryDelayMs(
+  result: { retryAfterMs?: number },
+  attempt: number,
+): number {
+  const retryAfter = result.retryAfterMs;
+  if (retryAfter !== undefined) return retryAfter;
+
+  const base = envNonNegativeInt("GRAPHQL_RETRY_BASE_MS", 1_000);
+  const max = envPositiveInt("GRAPHQL_RETRY_MAX_MS", 30_000);
+  const jitter = Math.floor(Math.random() * Math.max(250, base));
+  return Math.min(max, base * 2 ** (attempt - 1) + jitter);
+}
+
+function retryAfterMs(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1_000);
+  const dateMs = Date.parse(value);
+  if (Number.isFinite(dateMs)) return Math.max(0, dateMs - Date.now());
+  return undefined;
+}
+
+async function paceEndpoint(endpoint: string): Promise<void> {
+  const interval = endpointMinIntervalMs(endpoint);
+  if (interval <= 0) return;
+
+  const previous = endpointPaces.get(endpoint) ?? Promise.resolve();
+  let release!: () => void;
+  const current = previous
+    .catch(() => undefined)
+    .then(() => new Promise<void>((resolve) => {
+      release = resolve;
+    }));
+  endpointPaces.set(endpoint, current);
+
+  await previous.catch(() => undefined);
+  setTimeout(release, interval);
+}
+
+function endpointMinIntervalMs(endpoint: string): number {
+  if (endpoint.includes("api.morpho.org")) {
+    return envNonNegativeInt(
+      "MORPHO_GRAPHQL_MIN_INTERVAL_MS",
+      envNonNegativeInt("GRAPHQL_ENDPOINT_MIN_INTERVAL_MS", 0),
+    );
+  }
+  if (endpoint.includes("gateway.thegraph.com")) {
+    return envNonNegativeInt(
+      "THE_GRAPH_MIN_INTERVAL_MS",
+      envNonNegativeInt("GRAPHQL_ENDPOINT_MIN_INTERVAL_MS", 0),
+    );
+  }
+  return envNonNegativeInt("GRAPHQL_ENDPOINT_MIN_INTERVAL_MS", 0);
 }
 
 function envPositiveInt(name: string, fallback: number): number {
