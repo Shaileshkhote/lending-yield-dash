@@ -9,7 +9,7 @@ if (!args.length) {
   console.error("Usage: pnpm db:push | pnpm db:migrate | pnpm db:deploy | pnpm db:generate");
   process.exitCode = 1;
 } else {
-  run("pnpm", ["--filter", "@stablewatch-lending/db", "exec", "prisma", ...args]).catch((error) => {
+  run("pnpm", ["--filter", "@lendingscope/db", "exec", "prisma", ...args]).catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   });

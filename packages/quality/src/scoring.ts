@@ -1,4 +1,4 @@
-import type { QualityCheckResult } from "@stablewatch-lending/core";
+import type { QualityCheckResult } from "@lendingscope/core";
 
 export function scoreQuality(results: QualityCheckResult[]): number {
   const penalty = results.reduce((total, result) => {

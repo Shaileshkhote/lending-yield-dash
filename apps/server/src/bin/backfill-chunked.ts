@@ -7,7 +7,7 @@ import { loadEnv } from "../config/env";
 import { PrismaService } from "../db/prisma.service";
 import { SnapshotPersistenceService } from "../ingestion/snapshot-persistence.service";
 import { envInt, mapWithConcurrency, shuffle } from "../utils/concurrency";
-import { runQualityChecks, scoreQuality } from "@stablewatch-lending/quality";
+import { runQualityChecks, scoreQuality } from "@lendingscope/quality";
 import {
   isSupportedChain,
   lendingAdapters,
@@ -16,12 +16,12 @@ import {
   SUPPORTED_CHAINS,
   type Chain,
   type LendingAdapter,
-} from "@stablewatch-lending/adapters";
+} from "@lendingscope/adapters";
 import type {
   AdapterContext,
   CanonicalMarketSnapshot,
   RawMarketSnapshot,
-} from "@stablewatch-lending/core";
+} from "@lendingscope/core";
 
 type RpcCandidateMap = Partial<Record<Chain, string[]>>;
 type BlockNumberMap = Partial<Record<string, bigint>>;

@@ -3,7 +3,7 @@ import type {
   CanonicalMarketSnapshot,
   MarketDefinition,
   RawMarketSnapshot,
-} from "@stablewatch-lending/core";
+} from "@lendingscope/core";
 import type {
   LendingAdapter,
   LendingChainConfig,

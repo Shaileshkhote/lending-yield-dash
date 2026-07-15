@@ -38,16 +38,16 @@ importers:
       '@nestjs/serve-static':
         specifier: ^4.0.2
         version: 4.0.2(@nestjs/common@10.4.22(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.22)(express@4.22.1)
-      '@stablewatch-lending/adapters':
+      '@lendingscope/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
-      '@stablewatch-lending/core':
+      '@lendingscope/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@stablewatch-lending/db':
+      '@lendingscope/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@stablewatch-lending/quality':
+      '@lendingscope/quality':
         specifier: workspace:*
         version: link:../../packages/quality
       reflect-metadata:
@@ -100,7 +100,7 @@ importers:
 
   packages/adapters:
     dependencies:
-      '@stablewatch-lending/core':
+      '@lendingscope/core':
         specifier: workspace:*
         version: link:../core
       viem:
@@ -136,7 +136,7 @@ importers:
 
   packages/quality:
     dependencies:
-      '@stablewatch-lending/core':
+      '@lendingscope/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:

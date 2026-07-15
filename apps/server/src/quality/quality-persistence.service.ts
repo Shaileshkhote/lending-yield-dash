@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { QualityCheckResult } from "@stablewatch-lending/core";
+import type { QualityCheckResult } from "@lendingscope/core";
 import { PrismaService } from "../db/prisma.service";
 
 @Injectable()

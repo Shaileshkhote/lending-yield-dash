@@ -1,4 +1,4 @@
-import type { CanonicalMarketSnapshot, QualityCheckResult } from "@stablewatch-lending/core";
+import type { CanonicalMarketSnapshot, QualityCheckResult } from "@lendingscope/core";
 
 type Check = (snapshot: CanonicalMarketSnapshot, previous?: CanonicalMarketSnapshot) => QualityCheckResult[];
 

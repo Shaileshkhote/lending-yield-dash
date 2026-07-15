@@ -1,5 +1,5 @@
 {
-  "name": "@stablewatch-lending/adapters",
+  "name": "@lendingscope/adapters",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
-    "@stablewatch-lending/core": "workspace:*",
+    "@lendingscope/core": "workspace:*",
     "viem": "^2.21.53"
   },
   "devDependencies": {

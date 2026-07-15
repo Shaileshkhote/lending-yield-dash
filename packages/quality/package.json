@@ -1,5 +1,5 @@
 {
-  "name": "@stablewatch-lending/quality",
+  "name": "@lendingscope/quality",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
-    "@stablewatch-lending/core": "workspace:*"
+    "@lendingscope/core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.8"

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { Prisma } from "@stablewatch-lending/db";
+import { Prisma } from "@lendingscope/db";
 import { PrismaService } from "../db/prisma.service";
 
 type RebuildOptions = {

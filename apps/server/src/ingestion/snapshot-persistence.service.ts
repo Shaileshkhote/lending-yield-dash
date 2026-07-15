@@ -3,9 +3,9 @@ import {
   type CanonicalMarketSnapshot,
   type MarketDefinition,
   type RawMarketSnapshot
-} from "@stablewatch-lending/core";
-import { runQualityChecks, scoreQuality } from "@stablewatch-lending/quality";
-import { type Prisma } from "@stablewatch-lending/db";
+} from "@lendingscope/core";
+import { runQualityChecks, scoreQuality } from "@lendingscope/quality";
+import { type Prisma } from "@lendingscope/db";
 import { PrismaService } from "../db/prisma.service";
 import { QualityPersistenceService } from "../quality/quality-persistence.service";
 import { DailySnapshotProjectionService } from "./daily-snapshot-projection.service";

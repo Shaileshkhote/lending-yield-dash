@@ -4,7 +4,7 @@ import {
   lendingAdapters,
   rpcUrlsForChains,
   type LendingAdapter,
-} from "@stablewatch-lending/adapters";
+} from "@lendingscope/adapters";
 import { PrismaService } from "../db/prisma.service";
 import { SnapshotPersistenceService } from "./snapshot-persistence.service";
 import { envInt, mapWithConcurrency, shuffle } from "../utils/concurrency";

@@ -1,12 +1,12 @@
-# Stablewatch Lending Analytics
+# LendingScope Analytics
 
-Adapter-first lending analytics prototype for Stablewatch-style markets. The backend is a single NestJS server that runs protocol adapters, stores raw and canonical lending snapshots in Postgres, executes quality checks, and materializes public JSON to Cloudflare R2-compatible object storage. The frontend is a React/Vite dashboard served by the same NestJS app after build.
+Adapter-first lending analytics prototype for open lending markets. The backend is a single NestJS server that runs protocol adapters, stores raw and canonical lending snapshots in Postgres, executes quality checks, and materializes public JSON to Cloudflare R2-compatible object storage. The frontend is a Next.js dashboard.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Core["packages/core\ncontracts, hashing"] --> Adapters["packages/adapters\nAave, Spark, Compound"]
+  Core["packages/core\ncontracts, hashing"] --> Adapters["packages/adapters\nAave, Spark, Compound, Morpho"]
   Core --> Server["apps/server\nNestJS API + scheduler"]
   DbPkg["packages/db\nPrisma schema/client"] --> Server
   Quality["packages/quality\nchecks + scoring"] --> Server
@@ -33,8 +33,8 @@ The adapter package is intentionally internal for v1. It can be extracted later 
 ## What Is Implemented
 
 - Monorepo with `apps/server`, `apps/web`, `packages/adapters`, `packages/core`, `packages/db`, and `packages/quality`.
-- MVP adapters for `aave-v3`, `spark`, and `compound-v3`.
-- Self-contained Aave, Spark, and Compound adapters that fetch current market state from subgraphs and normalize it into a shared lending schema.
+- MVP adapters for `aave-v3`, `aave-v4`, `spark`, `compound-v3`, and `morpho-blue`.
+- Self-contained protocol adapters that fetch market state from protocol sources and normalize it into a shared lending schema.
 - Prisma/Postgres models for ingestion runs, raw payloads, canonical snapshots, quality checks, materialization runs, and R2 objects.
 - Hourly NestJS scheduler using `@nestjs/schedule`.
 - Manual internal endpoints protected by `ADMIN_API_KEY`.
@@ -74,7 +74,7 @@ ETHEREUM_RPC_URL
 BASE_RPC_URL
 ```
 
-The Graph is required for the shipped Aave, Spark, and Compound adapters:
+The Graph is required for the shipped subgraph-backed adapters:
 
 ```txt
 THE_GRAPH_API_KEY
@@ -115,13 +115,13 @@ The NestJS API defaults to:
 http://localhost:4000
 ```
 
-The Vite dashboard defaults to:
+The Next.js dashboard defaults to:
 
 ```txt
-http://localhost:5173/lending
+http://localhost:3000/lending
 ```
 
-After `pnpm build`, NestJS serves the built dashboard from `apps/web/dist`.
+The web app is served separately during development and can be deployed independently.
 
 ## API
 
@@ -159,8 +159,10 @@ lending/current.json
 lending/quality.json
 lending/anomalies.json
 lending/protocols/aave-v3.json
+lending/protocols/aave-v4.json
 lending/protocols/spark.json
 lending/protocols/compound-v3.json
+lending/protocols/morpho-blue.json
 lending/chains/ethereum.json
 lending/chains/base.json
 lending/assets/usdc.json

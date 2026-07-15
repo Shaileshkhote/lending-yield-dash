@@ -6,7 +6,7 @@ import type {
   MarketDefinition,
   RawMarketEvent,
   RawMarketSnapshot,
-} from "@stablewatch-lending/core";
+} from "@lendingscope/core";
 import type { AdapterVersion } from "./helpers/version";
 
 export type LendingChainConfig = {

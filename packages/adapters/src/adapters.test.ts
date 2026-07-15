@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RawMarketSnapshot } from "@stablewatch-lending/core";
+import type { RawMarketSnapshot } from "@lendingscope/core";
 import { CHAIN } from "./helpers/chains";
 import { normalizeProtocolSnapshot } from "./helpers/protocol-snapshot";
 import { rpcCandidatesForChain } from "./helpers/rpc";

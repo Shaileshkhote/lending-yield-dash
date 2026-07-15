@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="telegram-card">
           <button className="telegram-close" type="button">×</button>
           <Github className="github-card-logo" size={82} strokeWidth={1.4} />
-          <p>Independent technical prototype inspired by Stablewatch’s upcoming Lending category. Not affiliated with Stablewatch.</p>
+          <p>Independent technical prototype for open lending analytics, built from public protocol data.</p>
           <a className="telegram-button" href="https://github.com/Shaileshkhote/lending-yield-dash" target="_blank" rel="noreferrer">
             <Github size={14} />
             GitHub Repository

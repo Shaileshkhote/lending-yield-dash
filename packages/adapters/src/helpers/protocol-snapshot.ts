@@ -5,7 +5,7 @@ import {
   type CanonicalMarketSnapshot,
   type MarketDefinition,
   type RawMarketSnapshot
-} from "@stablewatch-lending/core";
+} from "@lendingscope/core";
 
 export type ProtocolMarketState = {
   supplyApy: number | null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CanonicalMarketSnapshot } from "@stablewatch-lending/core";
+import type { CanonicalMarketSnapshot } from "@lendingscope/core";
 import { runQualityChecks } from "./checks";
 import { scoreQuality } from "./scoring";
 

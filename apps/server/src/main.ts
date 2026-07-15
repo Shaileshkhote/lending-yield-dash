@@ -10,7 +10,7 @@ async function bootstrap() {
   app.enableCors();
   const port = Number(process.env.PORT ?? 4000);
   await app.listen(port);
-  console.log(`Stablewatch Lending API listening on http://localhost:${port}`);
+  console.log(`LendingScope API listening on http://localhost:${port}`);
 }
 
 void bootstrap();

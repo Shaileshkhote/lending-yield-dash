@@ -23,7 +23,7 @@ export function SourcesPage() {
         <div>
           <p className="eyebrow">Methodology</p>
           <h1>Adapter sources, provenance, and implementation</h1>
-          <p className="page-subtitle">Independent technical prototype inspired by Stablewatch’s upcoming Lending category. Not affiliated with Stablewatch.</p>
+          <p className="page-subtitle">Independent technical prototype for open lending analytics, built from public protocol data.</p>
         </div>
         <a className="contact-button" href="https://github.com/Shaileshkhote/lending-yield-dash" target="_blank" rel="noreferrer">
           <Github size={16} />

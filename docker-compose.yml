@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: stablewatch
-      POSTGRES_PASSWORD: stablewatch
-      POSTGRES_DB: stablewatch_lending
+      POSTGRES_USER: lendingscope
+      POSTGRES_PASSWORD: lendingscope
+      POSTGRES_DB: lendingscope
     ports:
       - "5432:5432"
     volumes:

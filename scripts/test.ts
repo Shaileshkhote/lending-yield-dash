@@ -22,7 +22,7 @@ main().catch((error) => {
 async function main(): Promise<void> {
   if (adapter) {
     const date = args[1] ?? "latest";
-    await run("pnpm", ["--filter", "@stablewatch-lending/server", "history", "--", date], {
+    await run("pnpm", ["--filter", "@lendingscope/server", "history", "--", date], {
       HISTORY_ADAPTERS: adapter
     });
   } else {

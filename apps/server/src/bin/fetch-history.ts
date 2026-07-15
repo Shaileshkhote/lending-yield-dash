@@ -10,11 +10,11 @@ import {
   SUPPORTED_CHAINS,
   type LendingAdapter,
   type Chain,
-} from "@stablewatch-lending/adapters";
+} from "@lendingscope/adapters";
 import type {
   AdapterContext,
   CanonicalMarketSnapshot,
-} from "@stablewatch-lending/core";
+} from "@lendingscope/core";
 
 type RpcCandidateMap = Partial<Record<Chain, string[]>>;
 type BlockNumberMap = Partial<Record<string, bigint>>;
