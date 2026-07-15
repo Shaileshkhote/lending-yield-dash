@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChainBadge } from "../components/ChainBadge";
 import { PageSkeleton } from "../components/Skeletons";
-import { fetchJson, type QualityCheck } from "../lib/api";
+import { TokenLogo } from "../components/TokenLogo";
+import { fetchJson, formatUsd, marketHealth, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
 export function QualityPage() {
-  const [checks, setChecks] = useState<QualityCheck[]>([]);
+  const [markets, setMarkets] = useState<LendingMarket[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetchJson<{ checks: QualityCheck[] }>("/api/lending/quality")
-      .then((response) => setChecks(response.checks))
+    fetchJson<CurrentMarketsResponse>("/api/lending/markets/current")
+      .then((response) => setMarkets(response.data))
       .finally(() => setLoaded(true));
   }, []);
 
@@ -21,33 +23,46 @@ export function QualityPage() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Quality</p>
-          <h1>Data health monitor</h1>
+          <h1>Market sync health</h1>
         </div>
       </header>
       <section className="panel">
-        <div className="table-wrap">
-          <table>
+        <div className="table-wrap quality-table-wrap">
+          <table className="market-table">
             <thead>
               <tr>
                 <th>Market</th>
-                <th>Check</th>
+                <th>Chain</th>
                 <th>Status</th>
-                <th>Severity</th>
-                <th>Message</th>
+                <th>Supplied</th>
+                <th>Updated</th>
+                <th>Reason</th>
               </tr>
             </thead>
             <tbody>
-              {checks.map((check) => (
-                <tr key={check.id}>
-                  <td>{check.marketId}</td>
-                  <td>{check.checkName}</td>
-                  <td>
-                    <span className={`status ${check.status}`}>{check.status}</span>
-                  </td>
-                  <td>{check.severity}</td>
-                  <td>{check.message}</td>
-                </tr>
-              ))}
+              {markets.map((market) => {
+                const health = marketHealth(market);
+                return (
+                  <tr key={market.marketId}>
+                    <td>
+                      <span className="quality-market">
+                        <TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="market" />
+                        <span>
+                          <strong>{market.assetSymbol}</strong>
+                          <small>{market.protocol}</small>
+                        </span>
+                      </span>
+                    </td>
+                    <td><ChainBadge chain={market.chain} compact /></td>
+                    <td>
+                      <span className={`quality q-${health.tone}`}>{health.label}</span>
+                    </td>
+                    <td>{formatUsd(market.totalSuppliedUsd)}</td>
+                    <td>{new Date(market.lastUpdated).toISOString().slice(0, 10)}</td>
+                    <td>{health.reason}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

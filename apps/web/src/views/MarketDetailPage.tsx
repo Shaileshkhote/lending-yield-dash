@@ -5,9 +5,10 @@ import { useParams } from "next/navigation";
 import { BarChart3, ExternalLink, Info, Percent, Share2, WalletCards } from "lucide-react";
 import type { ReactNode } from "react";
 import { Bar, BarChart, Brush, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChainBadge } from "../components/ChainBadge";
 import { MarketDetailSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
-import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse, type HistoryPoint, type LendingMarket, type PoolChartResponse } from "../lib/api";
+import { fetchJson, formatPct, formatUsd, marketHealth, poolLinks, type CurrentMarketsResponse, type HistoryPoint, type LendingMarket, type PoolChartResponse } from "../lib/api";
 
 type ChartMetric = "supplied" | "apy" | "borrowed";
 type ChartRange = "all" | "7d" | "30d" | "90d" | "1y";
@@ -87,6 +88,8 @@ export function MarketDetailPage() {
 
   const borrowedShare = market?.totalSuppliedUsd ? ((market.totalBorrowedUsd ?? 0) / market.totalSuppliedUsd) * 100 : null;
   const source = market?.source;
+  const health = market ? marketHealth(market) : null;
+  const links = market ? poolLinks(market) : null;
   const chartHeight = isCompactChart ? 360 : 430;
   const brushY = isCompactChart ? 292 : 348;
   const activeChart = useMemo(() => {
@@ -128,9 +131,7 @@ export function MarketDetailPage() {
           </div>
           <div className="chain-stack">
             <span>Chains:</span>
-            <i>{market.chain.slice(0, 1).toUpperCase()}</i>
-            <i>{market.protocol.slice(0, 1)}</i>
-            <i>{market.assetSymbol.slice(0, 1)}</i>
+            <ChainBadge chain={market.chain} compact />
           </div>
         </header>
 
@@ -213,9 +214,11 @@ export function MarketDetailPage() {
               <dt>Token</dt>
               <dd><TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="ticker" />{market.assetSymbol}</dd>
               <dt>Chain</dt>
-              <dd>{market.chain}</dd>
+              <dd><ChainBadge chain={market.chain} /></dd>
               <dt>Market Type</dt>
               <dd>{market.marketType}</dd>
+              <dt>Status</dt>
+              <dd><span className={`quality q-${health?.tone ?? "unreliable"}`} title={health?.reason}>{health?.label}</span></dd>
             </dl>
           </article>
 
@@ -274,11 +277,11 @@ export function MarketDetailPage() {
             borrow demand, utilization, APY, and data provenance collected from protocol subgraphs.
           </p>
           <div className="about-links">
-            <a href={`https://www.google.com/search?q=${encodeURIComponent(`${market.protocol} ${market.assetSymbol}`)}`} target="_blank" rel="noreferrer">
+            <a href={links?.app} target="_blank" rel="noreferrer">
               <ExternalLink size={14} />
               Website
             </a>
-            <a href={`https://www.google.com/search?q=${encodeURIComponent(`${market.protocol} docs`)}`} target="_blank" rel="noreferrer">
+            <a href={links?.docs} target="_blank" rel="noreferrer">
               <ExternalLink size={14} />
               Docs
             </a>

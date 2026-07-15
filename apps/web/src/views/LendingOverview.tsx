@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Search, SlidersHorizontal } from "lucide-react";
 import { MarketTable } from "../components/MarketTable";
 import { LendingOverviewSkeleton } from "../components/Skeletons";
@@ -8,6 +9,7 @@ import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse } from "../lib/api";
 
 export function LendingOverview() {
+  const router = useRouter();
   const [data, setData] = useState<CurrentMarketsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -125,10 +127,12 @@ export function LendingOverview() {
             className="view-button"
             type="button"
             onClick={() => {
-              setQuery("");
-              setChainFilter("all");
-              setRangeFilter("all");
-              setCategoryFilter("all");
+              const params = new URLSearchParams();
+              if (query.trim()) params.set("q", query.trim());
+              if (chainFilter !== "all") params.set("chain", chainFilter);
+              if (categoryFilter !== "all") params.set("protocol", categoryFilter);
+              if (rangeFilter !== "all") params.set("range", rangeFilter);
+              router.push(`/lending/markets${params.size ? `?${params.toString()}` : ""}`);
             }}
           >
             <SlidersHorizontal size={15} /> View

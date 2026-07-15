@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatPct, formatUsd, qualityLabel, type LendingMarket } from "../lib/api";
+import { formatPct, formatSignedPct, formatUsd, marketHealth, poolLinks, type LendingMarket } from "../lib/api";
+import { ChainBadge } from "./ChainBadge";
 import { TokenLogo } from "./TokenLogo";
 
 type Props = {
@@ -17,7 +18,7 @@ const columns: Array<{ key: SortKey; label: string }> = [
   { key: "utilization", label: "Utilization" },
   { key: "supplyApy", label: "Supply APY" },
   { key: "borrowApy", label: "Borrow APY" },
-  { key: "quality", label: "Quality" }
+  { key: "quality", label: "Status" }
 ];
 
 export function MarketTable({ markets }: Props) {
@@ -58,6 +59,7 @@ export function MarketTable({ markets }: Props) {
                 </button>
               </th>
             ))}
+            <th>Pool</th>
           </tr>
         </thead>
         <tbody>
@@ -69,7 +71,7 @@ export function MarketTable({ markets }: Props) {
                   <span className="asset-copy">
                   <strong>{market.assetSymbol}</strong>
                   <span>
-                    {market.protocol} / {market.chain}
+                    {market.protocol} <ChainBadge chain={market.chain} compact />
                   </span>
                   </span>
                 </Link>
@@ -77,12 +79,13 @@ export function MarketTable({ markets }: Props) {
               <td>{formatUsd(market.totalSuppliedUsd)}</td>
               <td>{formatUsd(market.totalBorrowedUsd)}</td>
               <td>{formatPct(market.utilization)}</td>
-              <td>{formatPct(market.netSupplyApy ?? market.supplyApy)}</td>
-              <td>{formatPct(market.borrowApy)}</td>
+              <td><span className={apyTone(market.netSupplyApy ?? market.supplyApy)}>{formatSignedPct(market.netSupplyApy ?? market.supplyApy)}</span></td>
+              <td><span className={apyTone(market.borrowApy)}>{formatSignedPct(market.borrowApy)}</span></td>
               <td>
-                <span className={`quality q-${qualityLabel(market.dataQualityScore).toLowerCase()}`}>
-                  {qualityLabel(market.dataQualityScore)}
-                </span>
+                <HealthBadge market={market} />
+              </td>
+              <td>
+                <a className="pool-link" href={poolLinks(market).app} target="_blank" rel="noreferrer">Pool</a>
               </td>
             </tr>
           ))}
@@ -90,6 +93,22 @@ export function MarketTable({ markets }: Props) {
       </table>
     </div>
   );
+}
+
+function HealthBadge({ market }: { market: LendingMarket }) {
+  const health = marketHealth(market);
+  return (
+    <span className={`quality q-${health.tone}`} title={health.reason}>
+      {health.label}
+    </span>
+  );
+}
+
+function apyTone(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  if (value > 0) return "up";
+  if (value < 0) return "down";
+  return "";
 }
 
 function sortValue(market: LendingMarket, key: SortKey): string | number {

@@ -26,6 +26,12 @@ export type LendingMarket = {
   };
 };
 
+export type MarketHealth = {
+  label: "Healthy" | "Syncing" | "Degraded" | "Unreliable";
+  tone: "healthy" | "syncing" | "degraded" | "unreliable";
+  reason: string;
+};
+
 export type CurrentMarketsResponse = {
   generatedAt: string;
   status: string;
@@ -57,19 +63,6 @@ export type PoolChartResponse = {
   data: HistoryPoint[];
 };
 
-export type QualityCheck = {
-  id: string;
-  marketId: string;
-  snapshotId?: string;
-  checkName: string;
-  status: "pass" | "warn" | "fail";
-  severity: "low" | "medium" | "high";
-  message: string;
-  observedValue?: string;
-  expectedValue?: string;
-  createdAt: string;
-};
-
 export async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(apiUrl(path));
   if (!response.ok) {
@@ -97,9 +90,73 @@ export function formatPct(value: number | null | undefined): string {
   return `${value.toFixed(2)}%`;
 }
 
-export function qualityLabel(score: number): "Healthy" | "Watch" | "Degraded" | "Unreliable" {
-  if (score >= 95) return "Healthy";
-  if (score >= 80) return "Watch";
-  if (score >= 50) return "Degraded";
-  return "Unreliable";
+export function formatSignedPct(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "N/A";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
+
+export function marketHealth(market: LendingMarket): MarketHealth {
+  const updatedAt = Date.parse(market.lastUpdated);
+  if (!Number.isFinite(updatedAt)) {
+    return { label: "Unreliable", tone: "unreliable", reason: "Missing update timestamp" };
+  }
+
+  const ageHours = (Date.now() - updatedAt) / 36e5;
+  const updatedToday = new Date(updatedAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
+  const score = market.dataQualityScore ?? 0;
+  const apy = market.netSupplyApy ?? market.supplyApy;
+
+  if (ageHours > 48) {
+    return { label: "Unreliable", tone: "unreliable", reason: `Last update is ${Math.floor(ageHours / 24)}d old` };
+  }
+  if (!updatedToday) {
+    return { label: "Syncing", tone: "syncing", reason: "Latest daily snapshot is still syncing" };
+  }
+  if (score < 50 || apy === null || apy === undefined || market.isActive === false) {
+    return { label: "Unreliable", tone: "unreliable", reason: "Current data is incomplete or inactive" };
+  }
+  if (score < 80 || market.isPaused) {
+    return { label: "Degraded", tone: "degraded", reason: "Current data is available but has quality warnings" };
+  }
+  return { label: "Healthy", tone: "healthy", reason: "Current through today with clean checks" };
+}
+
+export function poolLinks(market: LendingMarket): { app: string; docs: string } {
+  const chain = market.chain.toLowerCase();
+  const address = market.assetAddress;
+  if (market.protocolSlug === "aave-v3") {
+    return {
+      app: `https://app.aave.com/reserve-overview/?underlyingAsset=${address}&marketName=${aaveMarketName(chain)}`,
+      docs: "https://aave.com/docs/developers/aave-v3/markets",
+    };
+  }
+  if (market.protocolSlug === "morpho-blue") {
+    const morphoMarketId = market.marketId.match(/0x[a-f0-9]{64}$/i)?.[0];
+    return {
+      app: morphoMarketId ? `https://app.morpho.org/market?id=${morphoMarketId}&network=${chain}` : "https://app.morpho.org/markets",
+      docs: "https://docs.morpho.org/",
+    };
+  }
+  if (market.protocolSlug === "compound-v3") {
+    return {
+      app: `https://app.compound.finance/markets/${chain}/${address}`,
+      docs: "https://docs.compound.finance/",
+    };
+  }
+  if (market.protocolSlug === "spark") {
+    return {
+      app: `https://app.spark.fi/markets/${address}`,
+      docs: "https://docs.spark.fi/",
+    };
+  }
+  return {
+    app: `https://etherscan.io/token/${address}`,
+    docs: `https://etherscan.io/token/${address}`,
+  };
+}
+
+function aaveMarketName(chain: string): string {
+  if (chain === "ethereum") return "proto_mainnet_v3";
+  return `proto_${chain}_v3`;
 }

@@ -541,11 +541,17 @@ select {
 }
 
 .trend-copy small,
-.market-link span {
+.asset-copy > span {
   display: block;
   margin-top: 2px;
   color: #848484;
   font-size: 14px;
+}
+
+.asset-copy > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .trending-list b {
@@ -813,6 +819,21 @@ select {
   color: #f1f1f1;
 }
 
+.filters input {
+  height: 36px;
+  min-width: 180px;
+  padding: 0 13px;
+  border: 1px solid #303030;
+  border-radius: 999px;
+  outline: 0;
+  background: #101010;
+  color: #ffffff;
+}
+
+.filters input::placeholder {
+  color: #777;
+}
+
 .view-button {
   padding: 0 14px;
 }
@@ -929,6 +950,11 @@ select {
   color: #00d884;
 }
 
+.q-syncing {
+  background: rgb(83 140 255 / 16%);
+  color: #7ea5ff;
+}
+
 .q-watch,
 .warn {
   background: rgb(252 187 69 / 14%);
@@ -936,10 +962,30 @@ select {
 }
 
 .q-degraded,
-.fail,
+.fail {
+  background: rgb(252 187 69 / 14%);
+  color: #f0b848;
+}
+
 .q-unreliable {
   background: rgb(255 63 102 / 14%);
   color: #ff3f66;
+}
+
+.pool-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid #2c2c2c;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.pool-link:hover {
+  border-color: #565656;
 }
 
 .loaded-note {
@@ -1068,22 +1114,41 @@ select {
   margin-right: 8px;
 }
 
-.chain-stack i {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  margin-left: -6px;
-  border: 2px solid #050505;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 30% 25%, rgb(255 255 255 / 65%), transparent 22%),
-    #2467ff;
-  color: #ffffff;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 800;
+.chain-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #e7e7e7;
+  font-size: 13px;
 }
+
+.chain-mark {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  background: #202020;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.chain-ethereum .chain-mark { background: #30364f; }
+.chain-base .chain-mark { background: #114ee8; }
+.chain-arbitrum .chain-mark { background: #1f4f7a; }
+.chain-optimism .chain-mark { background: #8f1111; }
+.chain-polygon .chain-mark { background: #5d2d91; }
+.chain-avalanche .chain-mark { background: #8f1f1f; }
+.chain-bsc .chain-mark { background: #7a5a10; }
+.chain-unichain .chain-mark { background: #7b2f71; }
+.chain-hyperevm .chain-mark { background: #155e4d; }
+.chain-katana .chain-mark { background: #4b5563; }
+.chain-worldchain .chain-mark { background: #222222; }
+.chain-stable .chain-mark { background: #275343; }
 
 .asset-stat-grid {
   display: grid;
@@ -1431,6 +1496,13 @@ select {
   gap: 16px;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .page-header h1,
 .state h1 {
   margin: 0;
@@ -1466,6 +1538,28 @@ dt {
   padding: 16px;
   margin: 0;
   font-size: 13px;
+}
+
+.quality-table-wrap {
+  max-height: 72vh;
+}
+
+.quality-market {
+  display: inline-grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 170px;
+}
+
+.quality-market strong,
+.quality-market small {
+  display: block;
+}
+
+.quality-market small {
+  margin-top: 2px;
+  color: #858585;
 }
 
 dd {
