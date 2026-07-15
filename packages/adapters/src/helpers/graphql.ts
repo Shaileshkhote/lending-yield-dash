@@ -48,20 +48,37 @@ export async function queryGraphqlEndpoint<T>(args: {
   name?: string;
 }): Promise<T> {
   const body = JSON.stringify({ query: args.query, variables: args.variables ?? {} });
-  const result = await requestGraphql<T>(args.endpoint, body, args.headers);
   const source = args.name ?? args.endpoint;
+  const attempts = envPositiveInt("GRAPHQL_RETRIES", 3);
+  let lastResult: Awaited<ReturnType<typeof requestGraphql<T>>> | undefined;
 
-  if (!result.ok || result.json.errors?.length) {
-    const message = result.json.errors?.map((error) => error.message).join(" | ") || result.statusText;
-    throw new Error(`GraphQL query failed for ${source}: ${message}`);
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const result = await requestGraphql<T>(args.endpoint, body, args.headers);
+    lastResult = result;
+    if (result.ok && !result.json.errors?.length) {
+      if (!result.json.data) {
+        throw new Error(`GraphQL query returned no data for ${source}`);
+      }
+      return result.json.data;
+    }
+
+    if (!isRetryableGraphqlError(result) || attempt === attempts) break;
+    await sleep(envNonNegativeInt("GRAPHQL_RETRY_BASE_MS", 1_000) * attempt);
   }
-  if (!result.json.data) {
-    throw new Error(`GraphQL query returned no data for ${source}`);
+
+  if (!lastResult) {
+    throw new Error(`GraphQL query failed for ${source}: no response`);
   }
-  return result.json.data;
+  const message = lastResult.json.errors?.map((error) => error.message).join(" | ") || lastResult.statusText;
+  throw new Error(`GraphQL query failed for ${source}: ${message}`);
 }
 
 async function requestGraphql<T>(endpoint: string, body: string, headers: Record<string, string> = {}) {
+  const requestSleepMs = envNonNegativeInt("GRAPHQL_REQUEST_SLEEP_MS", 0);
+  if (requestSleepMs > 0) {
+    await sleep(requestSleepMs);
+  }
+
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -88,4 +105,42 @@ async function requestGraphql<T>(endpoint: string, body: string, headers: Record
 function isAuthError(result: { status: number; json: GraphqlResponse<unknown> }): boolean {
   if (result.status === 401 || result.status === 403) return true;
   return result.json.errors?.some((error) => error.message.toLowerCase().includes("auth error")) ?? false;
+}
+
+function isRetryableGraphqlError(result: {
+  status: number;
+  statusText: string;
+  json: GraphqlResponse<unknown>;
+}): boolean {
+  if (result.status === 429 || result.status >= 500) return true;
+  const message = [
+    result.statusText,
+    ...(result.json.errors?.map((error) => error.message) ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return (
+    message.includes("too many requests") ||
+    message.includes("rate limit") ||
+    message.includes("timeout") ||
+    message.includes("temporarily unavailable")
+  );
+}
+
+function envPositiveInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+function envNonNegativeInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : fallback;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
