@@ -1,173 +1,17 @@
-import type {
-  AdapterContext,
-  CanonicalMarketSnapshot,
-  MarketDefinition,
-  RawMarketSnapshot,
-} from "@lendingscope/core";
+import type { MarketDefinition } from "@lendingscope/core";
 import type {
   LendingAdapter,
+  LendingAdapterRow,
   LendingChainConfig,
   LendingFetchOptions,
-  LendingFetchResult,
+  LendingMarketValues,
 } from "../../types";
 import { CHAIN } from "../../helpers/chains";
 import { queryGraphqlEndpoint } from "../../helpers/graphql";
-import {
-  buildRawMarketSnapshot,
-  normalizeProtocolSnapshot,
-  type ProtocolMarketState,
-} from "../../helpers/protocol-snapshot";
+import { createLendingMarket } from "../../helpers/market";
+import { graphqlSource } from "../../helpers/source";
 import { round, toPercent } from "../../helpers/units";
 import { ADAPTER_VERSION } from "../../helpers/version";
-
-type AaveV4Deployment = {
-  chain: string;
-  chainId: number;
-  protocol: string;
-  adapterId: string;
-};
-
-type AaveV4PercentNumber = {
-  value: string;
-  normalized?: string;
-};
-
-type AaveV4DecimalNumber = {
-  value: string;
-  decimals: number;
-  onChainValue: string;
-};
-
-type AaveV4Erc20Amount = {
-  amount: AaveV4DecimalNumber;
-  exchange?: { value: string } | null;
-};
-
-type AaveV4TokenInfo = {
-  name: string;
-  symbol: string;
-  decimals: number;
-};
-
-type AaveV4Reserve = {
-  id: string;
-  onChainId: string;
-  chain: {
-    name: string;
-    chainId: number;
-  };
-  spoke: {
-    id: string;
-    name: string;
-    address: string;
-    chain: {
-      name: string;
-      chainId: number;
-    };
-  };
-  asset: {
-    id: string;
-    hub: {
-      id: string;
-      name: string;
-      address: string;
-      chain: {
-        name: string;
-        chainId: number;
-      };
-    };
-    underlying: {
-      address: string;
-      chain: {
-        name: string;
-        chainId: number;
-      };
-      info: AaveV4TokenInfo;
-    };
-    summary: {
-      supplied: AaveV4Erc20Amount;
-      borrowed: AaveV4Erc20Amount;
-      availableLiquidity: AaveV4Erc20Amount;
-      supplyApy: AaveV4PercentNumber;
-      borrowApy: AaveV4PercentNumber;
-      netApy: AaveV4PercentNumber;
-      utilizationRate: AaveV4PercentNumber;
-    };
-    settings: {
-      liquidityFee: AaveV4PercentNumber;
-    };
-  };
-  summary: {
-    supplied: AaveV4Erc20Amount;
-    borrowed: AaveV4Erc20Amount;
-    suppliable: AaveV4Erc20Amount;
-    borrowable: AaveV4Erc20Amount;
-    supplyApy: AaveV4PercentNumber;
-    borrowApy: AaveV4PercentNumber;
-  };
-  settings: {
-    collateralFactor: AaveV4PercentNumber;
-    maxLiquidationBonus: AaveV4PercentNumber;
-    liquidationFee: AaveV4PercentNumber;
-    borrowable: boolean;
-    collateral: boolean;
-    suppliable: boolean;
-    borrowCap: AaveV4Erc20Amount;
-    supplyCap: AaveV4Erc20Amount;
-  };
-  status: {
-    frozen: boolean;
-    paused: boolean;
-    active: boolean;
-  };
-  canBorrow: boolean;
-  canSupply: boolean;
-  canUseAsCollateral: boolean;
-};
-
-type AaveV4ReservesQueryData = {
-  reserves: AaveV4Reserve[];
-};
-
-type AaveV4HistorySample = {
-  date: string;
-  amount: { value: string };
-  averageApy: AaveV4PercentNumber;
-  breakdown: Array<{
-    hub: { id: string; name: string };
-    amount: { value: string };
-    apy: AaveV4PercentNumber;
-  }>;
-};
-
-type AaveV4PriceSample = {
-  date: string;
-  price: string;
-};
-
-type AaveV4HistoryQueryData = {
-  assetSupplyHistory: AaveV4HistorySample[];
-  assetBorrowHistory: AaveV4HistorySample[];
-  assetPriceHistory: AaveV4PriceSample[];
-};
-
-type AaveV4HubAssetMarket = {
-  assetId: string;
-  hub: AaveV4Reserve["asset"]["hub"];
-  underlying: AaveV4Reserve["asset"]["underlying"];
-  summary: AaveV4Reserve["asset"]["summary"];
-  settings: AaveV4Reserve["asset"]["settings"];
-  reserves: AaveV4Reserve[];
-};
-
-type AaveV4HistoryWindow = "LAST_MONTH" | "LAST_YEAR";
-
-type AaveV4MarketHistory = {
-  window: AaveV4HistoryWindow;
-  supply: AaveV4HistorySample[];
-  borrow: AaveV4HistorySample[];
-  prices: AaveV4PriceSample[];
-};
 
 const AAVE_V4_GRAPHQL_ENDPOINT =
   process.env.AAVE_V4_GRAPHQL_ENDPOINT?.trim() ||
@@ -175,7 +19,7 @@ const AAVE_V4_GRAPHQL_ENDPOINT =
 const AAVE_V4_HISTORY_START_DATE =
   process.env.AAVE_V4_HISTORY_START_DATE?.trim() || "2026-03-30";
 
-const DEPLOYMENTS: AaveV4Deployment[] = [
+const DEPLOYMENTS = [
   {
     chain: CHAIN.ETHEREUM,
     chainId: 1,
@@ -195,8 +39,8 @@ const chainConfig: Record<string, LendingChainConfig> = Object.fromEntries(
   ]),
 );
 
-const reserveCache = new Map<string, AaveV4Reserve[]>();
-const historyCache = new Map<string, AaveV4HistoryQueryData>();
+const reserveCache = new Map<string, any[]>();
+const historyCache = new Map<string, any>();
 
 const aaveV4Adapter: LendingAdapter = {
   id: "aave-v4",
@@ -214,7 +58,7 @@ const aaveV4Adapter: LendingAdapter = {
     },
   },
 
-  async fetch(options: LendingFetchOptions): Promise<LendingFetchResult> {
+  async fetch(options: LendingFetchOptions): Promise<LendingAdapterRow[]> {
     const deployment = deploymentForChain(options.chain);
     const marketsForChain = groupHubAssetMarkets(
       await loadReserves(deployment, options),
@@ -223,9 +67,7 @@ const aaveV4Adapter: LendingAdapter = {
     const historyWindow = historyDayValue
       ? historyWindowForDay(historyDayValue)
       : undefined;
-    const markets: MarketDefinition[] = [];
-    const rawPayloads: RawMarketSnapshot[] = [];
-    const snapshots: CanonicalMarketSnapshot[] = [];
+    const rows: LendingAdapterRow[] = [];
 
     for (const hubAsset of marketsForChain) {
       const token = hubAsset.underlying.info;
@@ -243,46 +85,42 @@ const aaveV4Adapter: LendingAdapter = {
         ? normalizeHistoricalHubAsset(hubAsset, historyDayValue, history)
         : normalizeHubAsset(hubAsset);
 
-      if (historyDayValue && !reserve) continue;
+      if (!reserve) continue;
 
-      const raw = buildRawMarketSnapshot({
-        adapterId: this.id,
+      rows.push({
         market,
-        ctx: options,
         blockNumber: Number(options.blockNumber ?? 0n),
-        protocolResponse: {
-          reserve,
-          rawHubAsset: hubAsset,
-          aaveV4Graphql: {
-            endpoint: AAVE_V4_GRAPHQL_ENDPOINT,
-            chainId: deployment.chainId,
+        values: reserve,
+        raw: hubAsset,
+        source: graphqlSource({
+          alias: "aaveV4Graphql",
+          endpoint: AAVE_V4_GRAPHQL_ENDPOINT,
+          chainId: deployment.chainId,
+          mode: historyDayValue ? "historical-history" : "latest",
+          extra: {
             hubId: hubAsset.hub.id,
             hubAddress: hubAsset.hub.address,
             assetId: hubAsset.assetId,
-            mode: historyDayValue ? "historical-history" : "latest",
             historyDay: historyDayValue,
             historyWindow,
           },
-        },
+        }),
       });
-      markets.push(market);
-      rawPayloads.push(raw);
-      snapshots.push(normalizeProtocolSnapshot(raw));
     }
 
-    return { markets, rawPayloads, snapshots };
+    return rows;
   },
 };
 
 async function loadReserves(
-  deployment: AaveV4Deployment,
-  ctx: AdapterContext,
-): Promise<AaveV4Reserve[]> {
+  deployment: any,
+  ctx: LendingFetchOptions,
+): Promise<any[]> {
   const cacheKey = `${deployment.chainId}:${ctx.assets?.join(",") ?? "all"}`;
   const cached = reserveCache.get(cacheKey);
   if (cached) return cached;
 
-  const data = await queryGraphqlEndpoint<AaveV4ReservesQueryData>({
+  const data = await queryGraphqlEndpoint<any>({
     endpoint: AAVE_V4_GRAPHQL_ENDPOINT,
     name: "Aave V4 GraphQL reserves",
     query: AAVE_V4_RESERVES_QUERY,
@@ -294,14 +132,14 @@ async function loadReserves(
 }
 
 async function loadMarketHistory(
-  deployment: AaveV4Deployment,
-  market: AaveV4HubAssetMarket,
-  window: AaveV4HistoryWindow,
-): Promise<AaveV4MarketHistory> {
+  deployment: any,
+  market: any,
+  window: string,
+): Promise<any> {
   const cacheKey = `${deployment.chainId}:${market.underlying.address.toLowerCase()}:${window}`;
   let data = historyCache.get(cacheKey);
   if (!data) {
-    data = await queryGraphqlEndpoint<AaveV4HistoryQueryData>({
+    data = await queryGraphqlEndpoint<any>({
       endpoint: AAVE_V4_GRAPHQL_ENDPOINT,
       name: "Aave V4 GraphQL asset history",
       query: AAVE_V4_HISTORY_QUERY,
@@ -413,10 +251,8 @@ const AAVE_V4_HISTORY_QUERY = `query AaveV4AssetHistory($token: Erc20Input!, $wi
   }
 }`;
 
-function groupHubAssetMarkets(
-  reserves: AaveV4Reserve[],
-): AaveV4HubAssetMarket[] {
-  const byAsset = new Map<string, AaveV4HubAssetMarket>();
+function groupHubAssetMarkets(reserves: any[]): any[] {
+  const byAsset = new Map<string, any>();
 
   for (const reserve of reserves) {
     const existing = byAsset.get(reserve.asset.id);
@@ -442,12 +278,12 @@ function groupHubAssetMarkets(
 }
 
 function marketFromHubAsset(
-  deployment: AaveV4Deployment,
-  market: AaveV4HubAssetMarket,
+  deployment: any,
+  market: any,
 ): MarketDefinition {
   const token = market.underlying;
   const hubSlug = slugify(market.hub.name || market.hub.address);
-  return {
+  return createLendingMarket({
     id: `${deployment.adapterId}-${deployment.chain}-${hubSlug}-${token.info.symbol.toLowerCase()}-${token.address.toLowerCase()}`,
     protocol: deployment.protocol,
     chain: deployment.chain,
@@ -460,12 +296,12 @@ function marketFromHubAsset(
     contracts: [
       market.hub.address,
       token.address,
-      ...market.reserves.map((reserve) => reserve.spoke.address),
+      ...market.reserves.map((reserve: any) => reserve.spoke.address),
     ],
-  };
+  });
 }
 
-function normalizeHubAsset(market: AaveV4HubAssetMarket): ProtocolMarketState {
+function normalizeHubAsset(market: any): LendingMarketValues {
   const suppliedUsd = exchangeValue(market.summary.supplied);
   const borrowedUsd = exchangeValue(market.summary.borrowed);
   return {
@@ -480,26 +316,26 @@ function normalizeHubAsset(market: AaveV4HubAssetMarket): ProtocolMarketState {
     availableLiquidityUsd: exchangeValue(market.summary.availableLiquidity),
     utilization: percentValue(market.summary.utilizationRate),
     ltv: maxPercent(
-      market.reserves.map((reserve) => reserve.settings.collateralFactor),
+      market.reserves.map((reserve: any) => reserve.settings.collateralFactor),
     ),
     liquidationThreshold: null,
     reserveFactor: percentValue(market.settings.liquidityFee),
     supplyCapUsd: sumExchangeValues(
-      market.reserves.map((reserve) => reserve.settings.supplyCap),
+      market.reserves.map((reserve: any) => reserve.settings.supplyCap),
     ),
     borrowCapUsd: sumExchangeValues(
-      market.reserves.map((reserve) => reserve.settings.borrowCap),
+      market.reserves.map((reserve: any) => reserve.settings.borrowCap),
     ),
     isActive: isActiveMarket(market),
-    isPaused: market.reserves.every((reserve) => reserve.status.paused),
+    isPaused: market.reserves.every((reserve: any) => reserve.status.paused),
   };
 }
 
 function normalizeHistoricalHubAsset(
-  market: AaveV4HubAssetMarket,
+  market: any,
   day: string,
-  history: AaveV4MarketHistory | undefined,
-): ProtocolMarketState | null {
+  history: any,
+): LendingMarketValues | null {
   const supplySample = sampleForDay(history?.supply ?? [], day);
   const borrowSample = sampleForDay(history?.borrow ?? [], day);
   const priceSample = priceForDay(history?.prices ?? [], day);
@@ -537,25 +373,25 @@ function normalizeHistoricalHubAsset(
         ? round((borrowedUsd / suppliedUsd) * 100, 6)
         : null,
     ltv: maxPercent(
-      market.reserves.map((reserve) => reserve.settings.collateralFactor),
+      market.reserves.map((reserve: any) => reserve.settings.collateralFactor),
     ),
     liquidationThreshold: null,
     reserveFactor: percentValue(market.settings.liquidityFee),
     supplyCapUsd: null,
     borrowCapUsd: null,
     isActive: isActiveMarket(market),
-    isPaused: market.reserves.every((reserve) => reserve.status.paused),
+    isPaused: market.reserves.every((reserve: any) => reserve.status.paused),
   };
 }
 
-function exchangeValue(amount: AaveV4Erc20Amount): number | null {
+function exchangeValue(amount: any): number | null {
   const value = amount.exchange?.value;
   if (value === undefined || value === null) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? round(parsed, 2) : null;
 }
 
-function sumExchangeValues(amounts: AaveV4Erc20Amount[]): number | null {
+function sumExchangeValues(amounts: any[]): number | null {
   const values = amounts
     .map(exchangeValue)
     .filter((value): value is number => value !== null && value > 0);
@@ -566,12 +402,12 @@ function sumExchangeValues(amounts: AaveV4Erc20Amount[]): number | null {
   );
 }
 
-function percentValue(value: AaveV4PercentNumber): number | null {
+function percentValue(value: any): number | null {
   const parsed = Number(value.value);
   return Number.isFinite(parsed) ? toPercent(parsed) : null;
 }
 
-function maxPercent(values: AaveV4PercentNumber[]): number | null {
+function maxPercent(values: any[]): number | null {
   const parsed = values
     .map(percentValue)
     .filter((value): value is number => value !== null);
@@ -579,13 +415,10 @@ function maxPercent(values: AaveV4PercentNumber[]): number | null {
   return Math.max(...parsed);
 }
 
-function hubSamples(
-  samples: AaveV4HistorySample[],
-  hubId: string,
-): AaveV4HistorySample[] {
-  const values: AaveV4HistorySample[] = [];
+function hubSamples(samples: any[], hubId: string): any[] {
+  const values: any[] = [];
   for (const sample of samples) {
-    const breakdown = sample.breakdown.find((item) => item.hub.id === hubId);
+    const breakdown = sample.breakdown.find((item: any) => item.hub.id === hubId);
     if (!breakdown) continue;
     values.push({
       ...sample,
@@ -598,9 +431,9 @@ function hubSamples(
 }
 
 function sampleForDay(
-  samples: AaveV4HistorySample[],
+  samples: any[],
   day: string,
-): (AaveV4HistorySample & { apy: AaveV4PercentNumber }) | undefined {
+): any | undefined {
   const dayStart = Date.parse(`${day}T00:00:00.000Z`);
   const sameDaySamples = samples.filter((item) => item.date.slice(0, 10) === day);
   const value = sameDaySamples.sort(
@@ -615,10 +448,7 @@ function sampleForDay(
   };
 }
 
-function priceForDay(
-  samples: AaveV4PriceSample[],
-  day: string,
-): number | null {
+function priceForDay(samples: any[], day: string): number | null {
   const dayStart = Date.parse(`${day}T00:00:00.000Z`);
   const sample = samples
     .filter((item) => item.date.slice(0, 10) === day)
@@ -636,25 +466,23 @@ function numberOrNull(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function hasBorrowRoute(market: AaveV4HubAssetMarket): boolean {
+function hasBorrowRoute(market: any): boolean {
   return market.reserves.some(
-    (reserve) => reserve.canBorrow || reserve.settings.borrowable,
+    (reserve: any) => reserve.canBorrow || reserve.settings.borrowable,
   );
 }
 
-function isActiveMarket(market: AaveV4HubAssetMarket): boolean {
+function isActiveMarket(market: any): boolean {
   return market.reserves.some(
-    (reserve) => reserve.status.active && !reserve.status.frozen,
+    (reserve: any) => reserve.status.active && !reserve.status.frozen,
   );
 }
 
-function historyDay(ctx: AdapterContext): string | undefined {
-  const day = ctx.now.toISOString().slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
-  return day < today ? day : undefined;
+function historyDay(ctx: LendingFetchOptions): string | undefined {
+  return ctx.runMode === "daily" ? ctx.dateString : undefined;
 }
 
-function historyWindowForDay(day: string): AaveV4HistoryWindow {
+function historyWindowForDay(day: string): string {
   const cutoff = new Date();
   cutoff.setUTCDate(cutoff.getUTCDate() - 31);
   return day >= cutoff.toISOString().slice(0, 10) ? "LAST_MONTH" : "LAST_YEAR";
@@ -664,7 +492,7 @@ function aaveV4HistoryStartDate(): string {
   return AAVE_V4_HISTORY_START_DATE;
  }
 
-function deploymentForChain(chain: string): AaveV4Deployment {
+function deploymentForChain(chain: string): any {
   const deployment = DEPLOYMENTS.find((item) => item.chain === chain);
   if (!deployment) {
     throw new Error(`No Aave V4 deployment configured for ${chain}`);

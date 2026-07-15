@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import {
+  buildLendingSnapshotResult,
+  buildLendingFetchOptions,
   lendingAdapters,
   rpcUrlsForChains,
   type LendingAdapter,
@@ -51,12 +53,23 @@ export class AdapterRunnerService {
     try {
       await mapWithConcurrency(workItems, workConcurrency, async ({ adapter, chain }: IngestionWorkItem) => {
         try {
-          const result = await adapter.fetch({
+          const ctx = {
             runId,
             now,
             rpcUrls: rpcUrlsForChains(adapter.supportedChains),
-            chain,
             chains: [chain],
+          };
+          const fetchCtx = buildLendingFetchOptions({
+            adapter,
+            chain,
+            ctx,
+            runMode: "latest",
+          });
+          const rows = await adapter.fetch(fetchCtx);
+          const result = buildLendingSnapshotResult({
+            adapterId: adapter.id,
+            ctx: fetchCtx,
+            rows,
           });
 
           await mapWithConcurrency(result.markets, writeConcurrency, async (market) => {
@@ -75,13 +88,6 @@ export class AdapterRunnerService {
             checks += persisted.checks;
           });
 
-          for (const error of result.errors ?? []) {
-            errors.push({
-              adapter: adapter.id,
-              chain,
-              message: error.marketId ? `${error.marketId}: ${error.message}` : error.message,
-            });
-          }
         } catch (error) {
           errors.push({
             adapter: adapter.id,

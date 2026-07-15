@@ -1,23 +1,15 @@
-import type { Address } from "viem";
+import type { MarketDefinition } from "@lendingscope/core";
 import type {
-  AdapterContext,
-  CanonicalMarketSnapshot,
-  MarketDefinition,
-  RawMarketSnapshot,
-} from "@lendingscope/core";
-import type {
+  LendingAdapterRow,
   LendingAdapter,
   LendingChainConfig,
   LendingFetchOptions,
-  LendingFetchResult,
+  LendingMarketValues,
 } from "../../types";
 import { CHAIN } from "../../helpers/chains";
-import { queryTheGraph } from "../../helpers/graphql";
-import {
-  buildRawMarketSnapshot,
-  normalizeProtocolSnapshot,
-  type ProtocolMarketState,
-} from "../../helpers/protocol-snapshot";
+import { paginateTheGraph } from "../../helpers/graphql";
+import { createLendingMarket } from "../../helpers/market";
+import { subgraphSource } from "../../helpers/source";
 import {
   bpsToPercent,
   capToUsd,
@@ -27,46 +19,7 @@ import {
 } from "../../helpers/units";
 import { ADAPTER_VERSION } from "../../helpers/version";
 
-type AaveSubgraphDeployment = {
-  chain: string;
-  protocol: string;
-  adapterId: string;
-  poolAddressesProvider: Address;
-  subgraphId: string;
-  subgraphStartBlock: number;
-  startDate: string;
-};
-
-type AaveSubgraphReserve = {
-  id: string;
-  underlyingAsset: string;
-  symbol: string;
-  name: string;
-  decimals: number | string;
-  liquidityRate: string;
-  variableBorrowRate: string;
-  utilizationRate: string;
-  totalLiquidity: string;
-  availableLiquidity: string;
-  totalCurrentVariableDebt: string;
-  totalPrincipalStableDebt: string;
-  baseLTVasCollateral: string;
-  reserveLiquidationThreshold: string;
-  reserveFactor: string;
-  supplyCap?: string | null;
-  borrowCap?: string | null;
-  isActive: boolean;
-  isPaused: boolean;
-  isFrozen: boolean;
-  price?: { priceInEth: string } | null;
-};
-
-type AaveReserveQueryData = {
-  _meta?: { block?: { number?: number } };
-  reserves: AaveSubgraphReserve[];
-};
-
-const SUBGRAPH_DEPLOYMENTS: AaveSubgraphDeployment[] = [
+const SUBGRAPH_DEPLOYMENTS = [
   {
     chain: CHAIN.ETHEREUM,
     protocol: "Aave V3",
@@ -109,7 +62,7 @@ const chainConfig: Record<string, LendingChainConfig> = Object.fromEntries(
   ]),
 );
 
-const reserveCache = new Map<string, AaveReserveQueryData>();
+const reserveCache = new Map<string, any>();
 
 const aaveV3Adapter: LendingAdapter = {
   id: "aave-v3",
@@ -130,12 +83,10 @@ const aaveV3Adapter: LendingAdapter = {
     },
   },
 
-  async fetch(options: LendingFetchOptions): Promise<LendingFetchResult> {
+  async fetch(options: LendingFetchOptions): Promise<LendingAdapterRow[]> {
     const deployment = deploymentForChain(options.chain);
     const reserves = await loadSubgraphReserves(deployment, options);
-    const markets: MarketDefinition[] = [];
-    const rawPayloads: RawMarketSnapshot[] = [];
-    const snapshots: CanonicalMarketSnapshot[] = [];
+    const rows: LendingAdapterRow[] = [];
     const blockNumber =
       options.blockNumber ??
       options.blockNumbers?.[deployment.chain] ??
@@ -148,37 +99,31 @@ const aaveV3Adapter: LendingAdapter = {
       )
         continue;
       const market = marketFromSubgraphReserve(deployment, reserve);
-      const raw = buildRawMarketSnapshot({
-        adapterId: this.id,
+      rows.push({
         market,
-        ctx: options,
-        blockNumber: Number(blockNumber),
-        protocolResponse: {
-          reserve: normalizeSubgraphReserve(reserve),
-          rawReserve: reserve,
-          aaveSubgraph: {
-            id: deployment.subgraphId,
-            blockNumber: blockNumber.toString(),
-            mode:
-              options.blockNumber || options.blockNumbers?.[deployment.chain]
-                ? "historical-block"
-                : "latest",
-          },
-        },
+        values: normalizeSubgraphReserve(reserve),
+        raw: reserve,
+        blockNumber,
+        source: subgraphSource({
+          alias: "aaveSubgraph",
+          id: deployment.subgraphId,
+          blockNumber,
+          mode:
+            options.blockNumber || options.blockNumbers?.[deployment.chain]
+              ? "historical-block"
+              : "latest",
+        }),
       });
-      markets.push(market);
-      rawPayloads.push(raw);
-      snapshots.push(normalizeProtocolSnapshot(raw));
     }
 
-    return { markets, rawPayloads, snapshots };
+    return rows;
   },
 };
 
 async function loadSubgraphReserves(
-  deployment: AaveSubgraphDeployment,
-  ctx: AdapterContext,
-): Promise<AaveReserveQueryData> {
+  deployment: any,
+  ctx: LendingFetchOptions,
+): Promise<any> {
   const blockNumber = ctx.blockNumbers?.[deployment.chain];
   if (blockNumber && blockNumber < BigInt(deployment.subgraphStartBlock)) {
     throw new Error(
@@ -190,20 +135,13 @@ async function loadSubgraphReserves(
   const cached = reserveCache.get(cacheKey);
   if (cached) return cached;
 
-  const reserves: AaveSubgraphReserve[] = [];
-  let meta: AaveReserveQueryData["_meta"];
-  for (let skip = 0; ; skip += 1000) {
-    const data = await queryTheGraph<AaveReserveQueryData>({
-      subgraphId: deployment.subgraphId,
-      query: reservesQuery(blockNumber),
-      variables: { first: 1000, skip },
-    });
-    reserves.push(...data.reserves);
-    meta = data._meta;
-    if (data.reserves.length < 1000) break;
-  }
+  const page = await paginateTheGraph<any, any>({
+    subgraphId: deployment.subgraphId,
+    query: reservesQuery(blockNumber),
+    getItems: (data) => data.reserves,
+  });
 
-  const value = { _meta: meta, reserves };
+  const value = { _meta: page.lastData?._meta, reserves: page.items };
   reserveCache.set(cacheKey, value);
   return value;
 }
@@ -241,10 +179,10 @@ function reservesQuery(blockNumber?: bigint): string {
 }
 
 function marketFromSubgraphReserve(
-  deployment: AaveSubgraphDeployment,
-  reserve: AaveSubgraphReserve,
+  deployment: any,
+  reserve: any,
 ): MarketDefinition {
-  return {
+  return createLendingMarket({
     id: `${deployment.adapterId}-${deployment.chain}-${reserve.symbol.toLowerCase()}-${reserve.underlyingAsset.toLowerCase()}`,
     protocol: deployment.protocol,
     chain: deployment.chain,
@@ -255,12 +193,12 @@ function marketFromSubgraphReserve(
     assetDecimals: Number(reserve.decimals),
     sourceMethod: "The Graph Aave reserves(block) query",
     contracts: [deployment.poolAddressesProvider, deployment.subgraphId],
-  };
+  });
 }
 
 function normalizeSubgraphReserve(
-  reserve: AaveSubgraphReserve,
-): ProtocolMarketState {
+  reserve: any,
+): LendingMarketValues {
   const decimals = Number(reserve.decimals);
   const priceUsd = Number(reserve.price?.priceInEth ?? 0) / 1e8;
   const supplied = unitsToNumber(BigInt(reserve.totalLiquidity), decimals);
@@ -301,7 +239,7 @@ function normalizeSubgraphReserve(
   };
 }
 
-function deploymentForChain(chain: string): AaveSubgraphDeployment {
+function deploymentForChain(chain: string): any {
   const deployment = SUBGRAPH_DEPLOYMENTS.find((item) => item.chain === chain);
   if (!deployment) {
     throw new Error(`No Aave V3 subgraph deployment configured for ${chain}`);
@@ -309,8 +247,8 @@ function deploymentForChain(chain: string): AaveSubgraphDeployment {
   return deployment;
 }
 
-function addressFromEnv(key: string, fallback: Address): Address {
-  return (process.env[key] as Address | undefined) ?? fallback;
+function addressFromEnv(key: string, fallback: string): string {
+  return process.env[key] ?? fallback;
 }
 
 export { aaveV3Adapter };

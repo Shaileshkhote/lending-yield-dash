@@ -1,109 +1,25 @@
-import type { Address } from "viem";
-import type {
-  AdapterContext,
-  CanonicalMarketSnapshot,
-  MarketDefinition,
-  RawMarketSnapshot,
-} from "@lendingscope/core";
+import type { MarketDefinition } from "@lendingscope/core";
 import type {
   LendingAdapter,
+  LendingAdapterRow,
   LendingChainConfig,
-  LendingFetchError,
   LendingFetchOptions,
-  LendingFetchResult,
+  LendingMarketValues,
 } from "../../types";
-import { queryGraphqlEndpoint } from "../../helpers/graphql";
 import {
-  buildRawMarketSnapshot,
-  normalizeProtocolSnapshot,
-  type ProtocolMarketState,
-} from "../../helpers/protocol-snapshot";
+  paginateGraphqlEndpoint,
+  queryGraphqlEndpoint,
+} from "../../helpers/graphql";
+import { createLendingMarket } from "../../helpers/market";
+import { graphqlSource } from "../../helpers/source";
 import { round, toPercent, wadToPercent } from "../../helpers/units";
 import { ADAPTER_VERSION } from "../../helpers/version";
-
-type MorphoDeployment = {
-  slug: string;
-  chainId: number;
-  network: string;
-  startDate: string;
-};
-
-type MorphoAsset = {
-  address: Address;
-  symbol: string;
-  decimals: number;
-  name: string;
-};
-
-type MorphoMarketState = {
-  blockNumber: string | number;
-  timestamp: string | number;
-  supplyAssetsUsd?: number | null;
-  borrowAssetsUsd?: number | null;
-  liquidityAssetsUsd?: number | null;
-  utilization: number;
-  supplyApy: number;
-  borrowApy: number;
-  netSupplyApy?: number | null;
-  netBorrowApy?: number | null;
-  fee: number;
-};
-
-type MorphoDataPoint = {
-  x: number;
-  y: number | null;
-};
-
-type MorphoMarketHistory = {
-  supplyAssetsUsd: MorphoDataPoint[];
-  borrowAssetsUsd: MorphoDataPoint[];
-  liquidityAssetsUsd: MorphoDataPoint[];
-  utilization: MorphoDataPoint[];
-  supplyApy: MorphoDataPoint[];
-  borrowApy: MorphoDataPoint[];
-  netSupplyApy: MorphoDataPoint[];
-  netBorrowApy: MorphoDataPoint[];
-};
-
-type MorphoMarket = {
-  marketId: string;
-  chain: {
-    id: number;
-    network: string;
-  };
-  creationBlockNumber: number;
-  creationTimestamp: string | number;
-  listed: boolean;
-  lltv: string;
-  loanAsset: MorphoAsset;
-  collateralAsset?: MorphoAsset | null;
-  morphoBlue: {
-    address: Address;
-  };
-  state?: MorphoMarketState | null;
-  historicalState?: MorphoMarketHistory | null;
-};
-
-type MorphoMarketsQueryData = {
-  markets: {
-    items: MorphoMarket[];
-  };
-};
-
-type MorphoMarketByIdQueryData = {
-  marketById: MorphoMarket;
-};
-
-type MorphoMarketRecord = {
-  market: MorphoMarket;
-  state: MorphoMarketState;
-};
 
 const MORPHO_GRAPHQL_ENDPOINT =
   process.env.MORPHO_GRAPHQL_ENDPOINT?.trim() ||
   "https://api.morpho.org/graphql";
 
-const DEPLOYMENTS: MorphoDeployment[] = [
+const DEPLOYMENTS = [
   {
     slug: "ethereum",
     chainId: 1,
@@ -175,8 +91,8 @@ const chainConfig: Record<string, LendingChainConfig> = Object.fromEntries(
   ]),
 );
 
-const currentCache = new Map<string, MorphoMarketRecord[]>();
-const historicalCache = new Map<string, MorphoMarketRecord>();
+const currentCache = new Map<string, any[]>();
+const historicalCache = new Map<string, any>();
 
 const morphoBlueAdapter: LendingAdapter = {
   id: "morpho-blue",
@@ -197,13 +113,10 @@ const morphoBlueAdapter: LendingAdapter = {
     },
   },
 
-  async fetch(options: LendingFetchOptions): Promise<LendingFetchResult> {
+  async fetch(options: LendingFetchOptions): Promise<LendingAdapterRow[]> {
     const deployment = deploymentForChain(options.chain);
     const records = await loadCurrentRecords(deployment, options);
-    const markets: MarketDefinition[] = [];
-    const rawPayloads: RawMarketSnapshot[] = [];
-    const snapshots: CanonicalMarketSnapshot[] = [];
-    const errors: LendingFetchError[] = [];
+    const rows: LendingAdapterRow[] = [];
 
     for (const currentRecord of records) {
       const currentMarket = currentRecord.market;
@@ -220,82 +133,66 @@ const morphoBlueAdapter: LendingAdapter = {
         const record = historyDay(options)
           ? await loadHistoricalRecord(deployment, market, options)
           : currentRecord;
-        markets.push(market);
-        const raw = buildRawMarketSnapshot({
-          adapterId: this.id,
+        rows.push({
           market,
-          ctx: options,
           blockNumber: Number(record.state.blockNumber),
-          protocolResponse: {
-            reserve: normalizeMarket(record),
-            rawMarket: record.market,
-            rawState: record.state,
-            morphoBlue: {
-              endpoint: MORPHO_GRAPHQL_ENDPOINT,
-              chainId: deployment.chainId,
+          values: normalizeMarket(record),
+          raw: {
+            market: record.market,
+            state: record.state,
+          },
+          source: graphqlSource({
+            alias: "morphoBlue",
+            endpoint: MORPHO_GRAPHQL_ENDPOINT,
+            chainId: deployment.chainId,
+            mode: historyDay(options) ? "historical-day" : "latest",
+            extra: {
               marketId: record.market.marketId,
               collateralAsset: record.market.collateralAsset,
-              mode: historyDay(options) ? "historical-day" : "latest",
             },
-          },
+          }),
         });
-        rawPayloads.push(raw);
-        snapshots.push(normalizeProtocolSnapshot(raw));
       } catch (error) {
         if (isMissingHistoricalPoint(error)) continue;
-        errors.push({
-          marketId: market.id,
-          message: error instanceof Error ? error.message : String(error),
-        });
+        throw error;
       }
     }
 
-    return {
-      markets,
-      rawPayloads,
-      snapshots,
-      errors,
-    };
+    return rows;
   },
 };
 
 async function loadCurrentRecords(
-  deployment: MorphoDeployment,
-  ctx: AdapterContext,
-): Promise<MorphoMarketRecord[]> {
+  deployment: any,
+  ctx: LendingFetchOptions,
+): Promise<any[]> {
   const cacheKey = `${deployment.chainId}:${ctx.assets?.join(",") ?? "all"}`;
   const cached = currentCache.get(cacheKey);
   if (cached) return cached;
 
-  const records: MorphoMarketRecord[] = [];
-  for (let skip = 0; ; skip += 1000) {
-    const data = await queryGraphqlEndpoint<MorphoMarketsQueryData>({
-      endpoint: MORPHO_GRAPHQL_ENDPOINT,
-      name: "Morpho GraphQL markets",
-      query: MORPHO_MARKETS_QUERY,
-      variables: { first: 1000, skip, chainIds: [deployment.chainId] },
-    });
-    const items = data.markets.items;
-    records.push(
-      ...items
-        .filter((market) => market.state)
-        .map((market) => ({
-          market,
-          state: market.state as MorphoMarketState,
-        })),
-    );
-    if (items.length < 1000) break;
-  }
+  const page = await paginateGraphqlEndpoint<any, any>({
+    endpoint: MORPHO_GRAPHQL_ENDPOINT,
+    name: "Morpho GraphQL markets",
+    query: MORPHO_MARKETS_QUERY,
+    variables: { chainIds: [deployment.chainId] },
+    getItems: (data) => data.markets.items,
+  });
+  const records = page.items
+    .filter((market: any) => market.state)
+    .map((market: any) => ({
+      market,
+      state: market.state,
+    }));
 
   currentCache.set(cacheKey, records);
   return records;
 }
 
 async function loadCurrentRecord(
-  deployment: MorphoDeployment,
+  deployment: any,
   market: MarketDefinition,
-  ctx: AdapterContext,
-): Promise<MorphoMarketRecord> {
+  ctx: LendingFetchOptions,
+): Promise<any> {
   const records = await loadCurrentRecords(deployment, ctx);
   const record = records.find(
     (item) =>
@@ -309,10 +206,10 @@ async function loadCurrentRecord(
 }
 
 async function loadHistoricalRecord(
-  deployment: MorphoDeployment,
+  deployment: any,
   market: MarketDefinition,
-  ctx: AdapterContext,
-): Promise<MorphoMarketRecord> {
+  ctx: LendingFetchOptions,
+): Promise<any> {
   const day = historyDay(ctx);
   if (!day) return loadCurrentRecord(deployment, market, ctx);
   if (day < deployment.startDate) {
@@ -327,7 +224,7 @@ async function loadHistoricalRecord(
   const cached = historicalCache.get(cacheKey);
   if (cached) return cached;
 
-  const data = await queryGraphqlEndpoint<MorphoMarketByIdQueryData>({
+  const data = await queryGraphqlEndpoint<any>({
     endpoint: MORPHO_GRAPHQL_ENDPOINT,
     name: "Morpho GraphQL marketById history",
     query: MORPHO_MARKET_HISTORY_QUERY,
@@ -412,13 +309,13 @@ const MORPHO_MARKET_HISTORY_QUERY = `query MorphoMarketHistory($marketId: String
 }`;
 
 function marketFromRecord(
-  deployment: MorphoDeployment,
-  market: MorphoMarket,
+  deployment: any,
+  market: any,
 ): MarketDefinition {
   const collateral = market.collateralAsset?.symbol
     ? `-${market.collateralAsset.symbol.toLowerCase()}`
     : "";
-  return {
+  return createLendingMarket({
     id: `${morphoBlueAdapter.id}-${deployment.slug}-${market.loanAsset.symbol.toLowerCase()}${collateral}-${market.marketId.toLowerCase()}`,
     protocol: morphoBlueAdapter.protocol,
     chain: deployment.slug,
@@ -429,10 +326,10 @@ function marketFromRecord(
     assetDecimals: Number(market.loanAsset.decimals),
     sourceMethod: "Morpho GraphQL markets/marketById query",
     contracts: [market.morphoBlue.address, market.marketId],
-  };
+  });
 }
 
-function normalizeMarket(record: MorphoMarketRecord): ProtocolMarketState {
+function normalizeMarket(record: any): LendingMarketValues {
   return {
     supplyApy: percentValue(record.state.supplyApy),
     borrowApy: percentValue(record.state.borrowApy),
@@ -459,9 +356,9 @@ function normalizeMarket(record: MorphoMarketRecord): ProtocolMarketState {
 }
 
 function stateFromHistory(
-  market: MorphoMarket,
+  market: any,
   targetTimestamp: number,
-): MorphoMarketState {
+): any {
   const history = market.historicalState;
   if (!history) {
     throw new Error(`Morpho market ${market.marketId} has no historical state`);
@@ -501,15 +398,15 @@ function isMissingHistoricalPoint(error: unknown): boolean {
 }
 
 function closestPoint(
-  points: MorphoDataPoint[],
+  points: any[],
   target: number,
-): MorphoDataPoint | undefined {
+): any | undefined {
   return points
     .filter((point) => point.y !== null)
     .sort((a, b) => Math.abs(a.x - target) - Math.abs(b.x - target))[0];
 }
 
-function deploymentForChain(chain: string): MorphoDeployment {
+function deploymentForChain(chain: string): any {
   const deployment = DEPLOYMENTS.find((item) => item.slug === chain);
   if (!deployment) {
     throw new Error(`No Morpho deployment configured for ${chain}`);
@@ -525,13 +422,11 @@ function morphoMarketId(market: MarketDefinition): string {
   return marketId;
 }
 
-function historyDay(ctx: AdapterContext): string | undefined {
-  const day = ctx.now.toISOString().slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
-  return day < today ? day : undefined;
+function historyDay(ctx: LendingFetchOptions): string | undefined {
+  return ctx.runMode === "daily" ? ctx.dateString : undefined;
 }
 
-function isAvailableOnDate(market: MorphoMarket, ctx: AdapterContext): boolean {
+function isAvailableOnDate(market: any, ctx: LendingFetchOptions): boolean {
   const day = historyDay(ctx);
   if (!day) return true;
   const end = Date.parse(`${day}T23:59:59.999Z`) / 1000;

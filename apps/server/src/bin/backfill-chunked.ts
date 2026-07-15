@@ -9,6 +9,9 @@ import { SnapshotPersistenceService } from "../ingestion/snapshot-persistence.se
 import { envInt, mapWithConcurrency, shuffle } from "../utils/concurrency";
 import { runQualityChecks, scoreQuality } from "@lendingscope/quality";
 import {
+  buildLendingFetchOptions,
+  buildLendingSnapshotResult,
+  chainsForLendingRun,
   isSupportedChain,
   lendingAdapters,
   normalizeChain,
@@ -41,6 +44,7 @@ type ChunkSummary = {
   markets: number;
   snapshots: number;
   updated: number;
+  refreshed: number;
   checks: number;
   errors: Array<{ date?: string; marketId?: string; message: string }>;
 };
@@ -68,6 +72,7 @@ const BLOCK_RETRIES = envInt("BACKFILL_BLOCK_RETRIES", 4);
 const DATE_SLEEP_MS = envNonNegativeInt("BACKFILL_DATE_SLEEP_MS", 0);
 const CHUNK_SLEEP_MS = envNonNegativeInt("BACKFILL_CHUNK_SLEEP_MS", 0);
 const FORCE_BACKFILL = process.env.BACKFILL_FORCE === "1";
+const REFRESH_DAILY_SNAPSHOTS = process.env.BACKFILL_REFRESH === "1";
 const SHUFFLE_WORK = process.env.BACKFILL_SHUFFLE !== "0";
 
 async function main() {
@@ -157,6 +162,7 @@ async function main() {
               0,
             ),
             updated: summaries.reduce((sum, item) => sum + item.updated, 0),
+            refreshed: summaries.reduce((sum, item) => sum + item.refreshed, 0),
             checks: summaries.reduce((sum, item) => sum + item.checks, 0),
             errors: summaries.reduce(
               (sum, item) => sum + item.errors.length,
@@ -208,10 +214,11 @@ async function runChunk(args: {
     markets: 0,
     snapshots: 0,
     updated: 0,
+    refreshed: 0,
     checks: 0,
     errors: [],
   };
-  const missingDates = FORCE_BACKFILL
+  const missingDates = FORCE_BACKFILL || REFRESH_DAILY_SNAPSHOTS
     ? item.dates
     : await missingDailyDates(prisma, item);
 
@@ -300,27 +307,41 @@ async function runDate(args: {
       chains: [item.chain],
       assets: assetFilter,
     };
-    const fetchResult = await retry(
+    const fetchCtx = buildLendingFetchOptions({
+      adapter: item.adapter,
+      chain: item.chain,
+      ctx,
+      runMode: "daily",
+      blockNumber,
+    });
+    const rows = await retry(
       () =>
-        item.adapter.fetch({
-          ...ctx,
-          chain: item.chain,
-          blockNumber,
-        }),
+        item.adapter.fetch(fetchCtx),
       MARKET_RETRIES,
     );
+    const fetchResult = buildLendingSnapshotResult({
+      adapterId: item.adapter.id,
+      ctx: fetchCtx,
+      rows,
+    });
     summary.markets += fetchResult.markets.length;
-    for (const itemError of fetchResult.errors ?? []) {
-      summary.errors.push({
-        date,
-        marketId: itemError.marketId,
-        message: itemError.message,
-      });
-    }
 
     await mapWithConcurrency(fetchResult.markets, WRITE_CONCURRENCY, async (market) => {
       await persistence.persistMarket(market);
     });
+
+    if (REFRESH_DAILY_SNAPSHOTS) {
+      const deleted = await refreshDailySnapshots(
+        prisma,
+        date,
+        item.adapter.id,
+        item.chain,
+      );
+      summary.refreshed += deleted;
+      console.log(
+        `[chunked-backfill] ${date} ${item.adapter.id} ${item.chain} refreshed: deleted ${deleted} existing daily rows`,
+      );
+    }
 
     let completed = 0;
     await mapWithConcurrency(fetchResult.rawPayloads, WRITE_CONCURRENCY, async (raw, index) => {
@@ -365,6 +386,22 @@ async function runDate(args: {
   } catch (error) {
     summary.errors.push({ date, message: compactErrorMessage(error) });
   }
+}
+
+async function refreshDailySnapshots(
+  prisma: PrismaService,
+  date: string,
+  adapterId: string,
+  chain: string,
+): Promise<number> {
+  const result = await prisma.dailyMarketSnapshot.deleteMany({
+    where: {
+      adapterId,
+      chain,
+      date: new Date(`${date}T00:00:00.000Z`),
+    },
+  });
+  return result.count;
 }
 
 async function persistCompactDailySnapshot(
@@ -524,10 +561,14 @@ function buildWorkItems(
       ? chainFilter
       : Object.keys(adapter.adapter);
     for (const chain of requestedChains) {
-      const historyStart =
-        adapter.dataAvailability.history?.startDateByChain[chain];
-      if (!historyStart) continue;
-      const chainDates = dates.filter((date) => date >= historyStart);
+      const chainDates = dates.filter((date) =>
+        chainsForLendingRun({
+          adapter,
+          chainFilter: [chain],
+          runMode: "daily",
+          dateString: date,
+        }).length > 0,
+      );
       for (const chunk of chunkDatesByMonth(chainDates, chunkDays)) {
         workItems.push({ adapter, chain, dates: chunk });
       }

@@ -40,6 +40,26 @@ export async function queryTheGraph<T>(args: {
   return result.json.data;
 }
 
+export async function paginateTheGraph<TData, TItem>(args: {
+  subgraphId: string;
+  query: string;
+  variables?: Record<string, unknown>;
+  pageSize?: number;
+  getItems: (data: TData) => TItem[];
+}): Promise<{ items: TItem[]; lastData?: TData }> {
+  return paginateGraphql<TData, TItem>({
+    pageSize: args.pageSize,
+    variables: args.variables,
+    getItems: args.getItems,
+    query: (variables) =>
+      queryTheGraph<TData>({
+        subgraphId: args.subgraphId,
+        query: args.query,
+        variables,
+      }),
+  });
+}
+
 export async function queryGraphqlEndpoint<T>(args: {
   endpoint: string;
   query: string;
@@ -71,6 +91,55 @@ export async function queryGraphqlEndpoint<T>(args: {
   }
   const message = lastResult.json.errors?.map((error) => error.message).join(" | ") || lastResult.statusText;
   throw new Error(`GraphQL query failed for ${source}: ${message}`);
+}
+
+export async function paginateGraphqlEndpoint<TData, TItem>(args: {
+  endpoint: string;
+  query: string;
+  variables?: Record<string, unknown>;
+  headers?: Record<string, string>;
+  name?: string;
+  pageSize?: number;
+  getItems: (data: TData) => TItem[];
+}): Promise<{ items: TItem[]; lastData?: TData }> {
+  return paginateGraphql<TData, TItem>({
+    pageSize: args.pageSize,
+    variables: args.variables,
+    getItems: args.getItems,
+    query: (variables) =>
+      queryGraphqlEndpoint<TData>({
+        endpoint: args.endpoint,
+        name: args.name,
+        headers: args.headers,
+        query: args.query,
+        variables,
+      }),
+  });
+}
+
+async function paginateGraphql<TData, TItem>(args: {
+  variables?: Record<string, unknown>;
+  pageSize?: number;
+  getItems: (data: TData) => TItem[];
+  query: (variables: Record<string, unknown>) => Promise<TData>;
+}): Promise<{ items: TItem[]; lastData?: TData }> {
+  const pageSize = args.pageSize ?? 1000;
+  const items: TItem[] = [];
+  let lastData: TData | undefined;
+
+  for (let skip = 0; ; skip += pageSize) {
+    const data = await args.query({
+      ...(args.variables ?? {}),
+      first: pageSize,
+      skip,
+    });
+    const page = args.getItems(data);
+    items.push(...page);
+    lastData = data;
+    if (page.length < pageSize) break;
+  }
+
+  return { items, lastData };
 }
 
 async function requestGraphql<T>(endpoint: string, body: string, headers: Record<string, string> = {}) {

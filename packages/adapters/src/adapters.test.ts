@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { RawMarketSnapshot } from "@lendingscope/core";
 import { CHAIN } from "./helpers/chains";
+import { buildLendingFetchOptions, chainsForLendingRun } from "./helpers/options";
 import { normalizeProtocolSnapshot } from "./helpers/protocol-snapshot";
 import { rpcCandidatesForChain } from "./helpers/rpc";
 import { ADAPTER_VERSION } from "./helpers/version";
-import { getAdapter } from "./registry";
+import { getAdapter, lendingAdapters } from "./registry";
 
 describe("lending adapters", () => {
   it("resolves RPC candidates from env first and public fallbacks second", () => {
@@ -35,6 +36,13 @@ describe("lending adapters", () => {
   });
 
   it("exposes DefiLlama-style adapter maps", () => {
+    expect(lendingAdapters.map((adapter) => adapter.id)).toEqual([
+      "aave-v3",
+      "aave-v4",
+      "compound-v3",
+      "morpho-blue",
+      "spark",
+    ]);
     expect(getAdapter("aave-v3").fetch).toEqual(expect.any(Function));
     expect(getAdapter("aave-v3").adapter.base.start).toBe("2023-08-21");
     expect(getAdapter("aave-v4").protocol).toBe("Aave V4");
@@ -86,6 +94,34 @@ describe("lending adapters", () => {
     expect(
       getAdapter("morpho-blue").dataAvailability.history?.startDateByChain.base,
     ).toBe("2024-05-15");
+  });
+
+  it("builds runner-owned date windows and chain eligibility", () => {
+    const adapter = getAdapter("aave-v3");
+    expect(
+      chainsForLendingRun({
+        adapter,
+        runMode: "daily",
+        dateString: "2022-12-28",
+      }),
+    ).toEqual([CHAIN.ETHEREUM]);
+
+    const options = buildLendingFetchOptions({
+      adapter,
+      chain: CHAIN.ETHEREUM,
+      runMode: "daily",
+      ctx: {
+        runId: "test-run",
+        now: new Date("2026-07-14T00:00:00.000Z"),
+        blockNumbers: { [CHAIN.ETHEREUM]: 123n },
+      },
+    });
+
+    expect(options.dateString).toBe("2026-07-14");
+    expect(options.startTimestamp).toBe(1783987200);
+    expect(options.endTimestamp).toBe(1784073600);
+    expect(options.blockNumber).toBe(123n);
+    expect(options.runMode).toBe("daily");
   });
 });
 

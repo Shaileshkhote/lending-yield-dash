@@ -9,6 +9,9 @@ import { SnapshotPersistenceService } from "../ingestion/snapshot-persistence.se
 import { envInt, mapWithConcurrency, shuffle } from "../utils/concurrency";
 import { runQualityChecks, scoreQuality } from "@lendingscope/quality";
 import {
+  buildLendingFetchOptions,
+  buildLendingSnapshotResult,
+  chainsForLendingRun,
   isSupportedChain,
   lendingAdapters,
   normalizeChain,
@@ -34,6 +37,7 @@ type BackfillSummary = {
   markets: number;
   snapshots: number;
   updated: number;
+  refreshed: number;
   checks: number;
   skipped: number;
   errors: Array<{ adapter: string; marketId?: string; message: string }>;
@@ -64,6 +68,7 @@ const WORK_SLEEP_MS = envNonNegativeInt(
   envNonNegativeInt("BACKFILL_ADAPTER_SLEEP_MS", 0),
 );
 const FORCE_BACKFILL = process.env.BACKFILL_FORCE === "1";
+const REFRESH_DAILY_SNAPSHOTS = process.env.BACKFILL_REFRESH === "1";
 const SHUFFLE_WORK = process.env.BACKFILL_SHUFFLE !== "0";
 const COMPACT_HISTORY = process.env.BACKFILL_COMPACT !== "0";
 
@@ -113,6 +118,7 @@ async function main() {
         markets: 0,
         snapshots: 0,
         updated: 0,
+        refreshed: 0,
         checks: 0,
         skipped: 0,
         errors: [],
@@ -130,7 +136,12 @@ async function main() {
       );
       const workItems: BackfillWorkItem[] = [];
       for (const adapter of selectedAdapters) {
-        const adapterChains = chainsForTarget(adapter, target, chainFilter);
+        const adapterChains = chainsForLendingRun({
+          adapter,
+          chainFilter,
+          runMode: "daily",
+          dateString: target,
+        });
         if (!adapterChains.length) {
           console.log(
             `[backfill] ${target} ${adapter.id} skipped: no daily history availability for selected chains/date`,
@@ -198,6 +209,7 @@ async function main() {
           workItems: summaries.reduce((sum, item) => sum + item.workItems, 0),
           snapshots: summaries.reduce((sum, item) => sum + item.snapshots, 0),
           updated: summaries.reduce((sum, item) => sum + item.updated, 0),
+          refreshed: summaries.reduce((sum, item) => sum + item.refreshed, 0),
           checks: summaries.reduce((sum, item) => sum + item.checks, 0),
           skipped: summaries.reduce((sum, item) => sum + item.skipped, 0),
           errors: summaries.reduce((sum, item) => sum + item.errors.length, 0),
@@ -225,39 +237,55 @@ async function runBackfillWorkItem(args: {
   const { adapter, chain } = item;
 
   try {
-    if (!FORCE_BACKFILL && (await hasDailySnapshot(prisma, target, adapter.id, chain))) {
+    if (
+      !FORCE_BACKFILL &&
+      !REFRESH_DAILY_SNAPSHOTS &&
+      (await hasDailySnapshot(prisma, target, adapter.id, chain))
+    ) {
       summary.skipped += 1;
       console.log(`[backfill] ${target} ${adapter.id} ${chain} skipped: already stored`);
       return;
     }
 
     console.log(`[backfill] ${target} ${adapter.id} ${chain} fetching`);
-    const fetchResult = await retry(
+    const fetchCtx = buildLendingFetchOptions({
+      adapter,
+      chain,
+      ctx,
+      runMode: "daily",
+      blockNumber: blockNumbers[chain],
+    });
+    const rows = await retry(
       () =>
-        adapter.fetch({
-          ...ctx,
-          chain,
-          chains: [chain],
-          blockNumber: blockNumbers[chain],
-          blockNumbers: filterRecord(blockNumbers, [chain]),
-        }),
+        adapter.fetch(fetchCtx),
       MARKET_RETRIES,
     );
+    const fetchResult = buildLendingSnapshotResult({
+      adapterId: adapter.id,
+      ctx: fetchCtx,
+      rows,
+    });
     summary.markets += fetchResult.markets.length;
-    for (const itemError of fetchResult.errors ?? []) {
-      summary.errors.push({
-        adapter: adapter.id,
-        marketId: itemError.marketId,
-        message: itemError.message,
-      });
-    }
     console.log(
-      `[backfill] ${target} ${adapter.id} ${chain} markets=${fetchResult.markets.length} snapshots=${fetchResult.snapshots.length} errors=${fetchResult.errors?.length ?? 0}`,
+      `[backfill] ${target} ${adapter.id} ${chain} markets=${fetchResult.markets.length} snapshots=${fetchResult.snapshots.length}`,
     );
 
     await mapWithConcurrency(fetchResult.markets, WRITE_CONCURRENCY, async (market) => {
       await persistence.persistMarket(market);
     });
+
+    if (COMPACT_HISTORY && REFRESH_DAILY_SNAPSHOTS) {
+      const deleted = await refreshDailySnapshots(
+        prisma,
+        target,
+        adapter.id,
+        chain,
+      );
+      summary.refreshed += deleted;
+      console.log(
+        `[backfill] ${target} ${adapter.id} ${chain} refreshed: deleted ${deleted} existing daily rows`,
+      );
+    }
 
     let completed = 0;
     await mapWithConcurrency(fetchResult.rawPayloads, WRITE_CONCURRENCY, async (raw, index) => {
@@ -307,6 +335,22 @@ async function runBackfillWorkItem(args: {
       message: `${chain}: ${errorMessage(error)}`,
     });
   }
+}
+
+async function refreshDailySnapshots(
+  prisma: PrismaService,
+  target: string,
+  adapterId: string,
+  chain: string,
+): Promise<number> {
+  const result = await prisma.dailyMarketSnapshot.deleteMany({
+    where: {
+      adapterId,
+      chain,
+      date: new Date(`${target}T00:00:00.000Z`),
+    },
+  });
+  return result.count;
 }
 
 async function persistCompactDailySnapshot(
@@ -581,21 +625,6 @@ function selectedChains(chainFilter: string[]): Chain[] {
   return [...new Set(chains)] as Chain[];
 }
 
-function chainsForTarget(
-  adapter: LendingAdapter,
-  target: string,
-  chainFilter: string[],
-): string[] {
-  const requestedChains = chainFilter.length
-    ? chainFilter
-    : Object.keys(adapter.adapter);
-  return requestedChains.filter((chain) => {
-    const historyStart =
-      adapter.dataAvailability.history?.startDateByChain[chain];
-    return Boolean(historyStart && target >= historyStart);
-  });
-}
-
 async function retry<T>(fn: () => Promise<T>, attempts: number): Promise<T> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -609,17 +638,6 @@ async function retry<T>(fn: () => Promise<T>, attempts: number): Promise<T> {
     }
   }
   throw lastError;
-}
-
-function filterRecord<T>(
-  record: Partial<Record<string, T>>,
-  keys: string[],
-): Partial<Record<string, T>> {
-  return Object.fromEntries(
-    keys
-      .map((key) => [key, record[key]])
-      .filter(([, value]) => value !== undefined),
-  );
 }
 
 function historicalRpcCandidatesForChain(chain: Chain): string[] {

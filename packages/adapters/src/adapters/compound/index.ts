@@ -1,85 +1,19 @@
-import type {
-  AdapterContext,
-  CanonicalMarketSnapshot,
-  MarketDefinition,
-  RawMarketSnapshot,
-} from "@lendingscope/core";
+import type { MarketDefinition } from "@lendingscope/core";
 import type {
   LendingAdapter,
+  LendingAdapterRow,
   LendingChainConfig,
   LendingFetchOptions,
-  LendingFetchResult,
+  LendingMarketValues,
 } from "../../types";
 import { CHAIN } from "../../helpers/chains";
-import { queryTheGraph } from "../../helpers/graphql";
-import {
-  buildRawMarketSnapshot,
-  normalizeProtocolSnapshot,
-  type ProtocolMarketState,
-} from "../../helpers/protocol-snapshot";
+import { paginateTheGraph } from "../../helpers/graphql";
+import { createLendingMarket } from "../../helpers/market";
+import { subgraphSource } from "../../helpers/source";
 import { aprPercentToApy, round } from "../../helpers/units";
 import { ADAPTER_VERSION } from "../../helpers/version";
 
-type CompoundDeployment = {
-  chain: string;
-  protocol: string;
-  adapterId: string;
-  subgraphId: string;
-};
-
-type CompoundToken = {
-  id: string;
-  symbol: string;
-  decimals: number | string;
-};
-
-type CompoundRate = {
-  rate: string;
-  side: string;
-  type: string;
-};
-
-type CompoundMarket = {
-  id: string;
-  name?: string | null;
-  inputToken: CompoundToken;
-  totalDepositBalanceUSD?: string | null;
-  totalBorrowBalanceUSD?: string | null;
-  totalValueLockedUSD?: string | null;
-  maximumLTV?: string | null;
-  liquidationThreshold?: string | null;
-  reserveFactor?: string | null;
-  isActive?: boolean | null;
-  rates?: CompoundRate[] | null;
-};
-
-type CompoundDailySnapshot = {
-  id: string;
-  timestamp: string;
-  blockNumber: string;
-  market: CompoundMarket;
-  totalDepositBalanceUSD?: string | null;
-  totalBorrowBalanceUSD?: string | null;
-  totalValueLockedUSD?: string | null;
-  reserveFactor?: string | null;
-  rates?: CompoundRate[] | null;
-};
-
-type CompoundMarketRecord = {
-  market: CompoundMarket;
-  blockNumber: number;
-};
-
-type CompoundMarketsQueryData = {
-  _meta?: { block?: { number?: number } };
-  markets: CompoundMarket[];
-};
-
-type CompoundDailySnapshotsQueryData = {
-  marketDailySnapshots: CompoundDailySnapshot[];
-};
-
-const DEPLOYMENTS: CompoundDeployment[] = [
+const DEPLOYMENTS = [
   {
     chain: CHAIN.ETHEREUM,
     protocol: "Compound III",
@@ -104,7 +38,7 @@ const chainConfig: Record<string, LendingChainConfig> = Object.fromEntries(
   ]),
 );
 
-const recordCache = new Map<string, CompoundMarketRecord[]>();
+const recordCache = new Map<string, any[]>();
 
 const compoundV3Adapter: LendingAdapter = {
   id: "compound-v3",
@@ -122,12 +56,10 @@ const compoundV3Adapter: LendingAdapter = {
     },
   },
 
-  async fetch(options: LendingFetchOptions): Promise<LendingFetchResult> {
+  async fetch(options: LendingFetchOptions): Promise<LendingAdapterRow[]> {
     const deployment = deploymentForChain(options.chain);
     const records = await loadMarketRecords(deployment, options);
-    const markets: MarketDefinition[] = [];
-    const rawPayloads: RawMarketSnapshot[] = [];
-    const snapshots: CanonicalMarketSnapshot[] = [];
+    const rows: LendingAdapterRow[] = [];
 
     for (const record of records) {
       const marketRecord = record.market;
@@ -139,37 +71,26 @@ const compoundV3Adapter: LendingAdapter = {
         continue;
 
       const market = marketFromRecord(deployment, marketRecord);
-      const raw = buildRawMarketSnapshot({
-        adapterId: deployment.adapterId,
+      rows.push({
         market,
-        ctx: options,
         blockNumber: record.blockNumber,
-        protocolResponse: {
-          reserve: normalizeMarket(marketRecord),
-          rawMarket: marketRecord,
-          subgraph: {
-            id: deployment.subgraphId,
-            blockNumber: record.blockNumber.toString(),
-          },
-        },
+        values: normalizeMarket(marketRecord),
+        raw: marketRecord,
+        source: subgraphSource({
+          id: deployment.subgraphId,
+          blockNumber: record.blockNumber,
+        }),
       });
-      markets.push(market);
-      rawPayloads.push(raw);
-      snapshots.push(normalizeProtocolSnapshot(raw));
     }
 
-    return {
-      markets,
-      rawPayloads,
-      snapshots,
-    };
+    return rows;
   },
 };
 
 async function loadMarketRecords(
-  deployment: CompoundDeployment,
-  ctx: AdapterContext,
-): Promise<CompoundMarketRecord[]> {
+  deployment: any,
+  ctx: LendingFetchOptions,
+): Promise<any[]> {
   const cacheKey = `${deployment.subgraphId}:${historyDay(ctx) ?? "latest"}:${ctx.assets?.join(",") ?? "all"}`;
   const cached = recordCache.get(cacheKey);
   if (cached) return cached;
@@ -182,42 +103,32 @@ async function loadMarketRecords(
 }
 
 async function loadCurrentRecords(
-  deployment: CompoundDeployment,
-): Promise<CompoundMarketRecord[]> {
-  const markets: CompoundMarket[] = [];
-  let metaBlock = 0;
-  for (let skip = 0; ; skip += 1000) {
-    const data = await queryTheGraph<CompoundMarketsQueryData>({
-      subgraphId: deployment.subgraphId,
-      query: currentMarketsQuery(),
-      variables: { first: 1000, skip },
-    });
-    markets.push(...data.markets);
-    metaBlock = data._meta?.block?.number ?? metaBlock;
-    if (data.markets.length < 1000) break;
-  }
-  return markets.map((market) => ({ market, blockNumber: metaBlock }));
+  deployment: any,
+): Promise<any[]> {
+  const page = await paginateTheGraph<any, any>({
+    subgraphId: deployment.subgraphId,
+    query: currentMarketsQuery(),
+    getItems: (data) => data.markets,
+  });
+  const metaBlock = page.lastData?._meta?.block?.number ?? 0;
+  return page.items.map((market) => ({ market, blockNumber: metaBlock }));
 }
 
 async function loadDailyRecords(
-  deployment: CompoundDeployment,
-  ctx: AdapterContext,
-): Promise<CompoundMarketRecord[]> {
+  deployment: any,
+  ctx: LendingFetchOptions,
+): Promise<any[]> {
   const day = historyDay(ctx);
   if (!day) return loadCurrentRecords(deployment);
   const start = Date.parse(`${day}T00:00:00.000Z`) / 1000;
   const end = start + 86_400;
-  const snapshots: CompoundDailySnapshot[] = [];
-  for (let skip = 0; ; skip += 1000) {
-    const data = await queryTheGraph<CompoundDailySnapshotsQueryData>({
-      subgraphId: deployment.subgraphId,
-      query: dailySnapshotsQuery(),
-      variables: { first: 1000, skip, start, end },
-    });
-    snapshots.push(...data.marketDailySnapshots);
-    if (data.marketDailySnapshots.length < 1000) break;
-  }
-  return snapshots.map((snapshot) => ({
+  const page = await paginateTheGraph<any, any>({
+    subgraphId: deployment.subgraphId,
+    query: dailySnapshotsQuery(),
+    variables: { start, end },
+    getItems: (data) => data.marketDailySnapshots,
+  });
+  return page.items.map((snapshot) => ({
     market: marketFromSnapshot(snapshot),
     blockNumber: Number(snapshot.blockNumber),
   }));
@@ -267,7 +178,7 @@ function dailySnapshotsQuery(): string {
   }`;
 }
 
-function marketFromSnapshot(snapshot: CompoundDailySnapshot): CompoundMarket {
+function marketFromSnapshot(snapshot: any): any {
   return {
     ...snapshot.market,
     totalDepositBalanceUSD: snapshot.totalDepositBalanceUSD,
@@ -279,10 +190,10 @@ function marketFromSnapshot(snapshot: CompoundDailySnapshot): CompoundMarket {
 }
 
 function marketFromRecord(
-  deployment: CompoundDeployment,
-  market: CompoundMarket,
+  deployment: any,
+  market: any,
 ): MarketDefinition {
-  return {
+  return createLendingMarket({
     id: `${deployment.adapterId}-${deployment.chain}-${market.inputToken.symbol.toLowerCase()}-${market.id.toLowerCase()}`,
     protocol: deployment.protocol,
     chain: deployment.chain,
@@ -293,10 +204,10 @@ function marketFromRecord(
     assetDecimals: Number(market.inputToken.decimals),
     sourceMethod: "The Graph Compound markets/dailySnapshots query",
     contracts: [market.id, deployment.subgraphId],
-  };
+  });
 }
 
-function normalizeMarket(market: CompoundMarket): ProtocolMarketState {
+function normalizeMarket(market: any): LendingMarketValues {
   const suppliedUsd = numberOrNull(market.totalDepositBalanceUSD);
   const borrowedUsd = numberOrNull(market.totalBorrowBalanceUSD);
   const tvlUsd = numberOrNull(market.totalValueLockedUSD);
@@ -325,22 +236,17 @@ function normalizeMarket(market: CompoundMarket): ProtocolMarketState {
   };
 }
 
-function historyDay(ctx: AdapterContext): string | undefined {
-  const day = ctx.now.toISOString().slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
-  return day < today ? day : undefined;
+function historyDay(ctx: LendingFetchOptions): string | undefined {
+  return ctx.runMode === "daily" ? ctx.dateString : undefined;
 }
 
-function rateFor(
-  market: CompoundMarket,
-  side: "LENDER" | "BORROWER",
-): number | null {
+function rateFor(market: any, side: "LENDER" | "BORROWER"): number | null {
   const rate =
     market.rates?.find(
-      (item) =>
+      (item: any) =>
         item.side.toUpperCase() === side &&
         item.type.toUpperCase() === "VARIABLE",
-    ) ?? market.rates?.find((item) => item.side.toUpperCase() === side);
+    ) ?? market.rates?.find((item: any) => item.side.toUpperCase() === side);
   const value = numberOrNull(rate?.rate);
   return value === null ? null : aprPercentToApy(value);
 }
@@ -366,14 +272,14 @@ function fractionPercentValue(value: string | null | undefined): number | null {
 function optionalSubgraphDeployment(
   chain: string,
   subgraphId?: string,
-): CompoundDeployment[] {
+): any[] {
   if (!subgraphId) return [];
   return [
     { chain, protocol: "Compound III", adapterId: "compound-v3", subgraphId },
   ];
 }
 
-function deploymentForChain(chain: string): CompoundDeployment {
+function deploymentForChain(chain: string): any {
   const deployment = DEPLOYMENTS.find((item) => item.chain === chain);
   if (!deployment) {
     throw new Error(

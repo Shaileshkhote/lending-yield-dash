@@ -3,6 +3,9 @@ import { dirname, join } from "node:path";
 import { createPublicClient, http, type PublicClient } from "viem";
 import { loadEnv } from "../config/env";
 import {
+  buildLendingFetchOptions,
+  buildLendingSnapshotResult,
+  chainsForLendingRun,
   isSupportedChain,
   lendingAdapters,
   normalizeChain,
@@ -45,6 +48,7 @@ async function main() {
 
   for (const target of targets) {
     const blockNumbers = await blockNumbersForTarget(target, rpcCandidates);
+    const runMode = target === "latest" ? "latest" : "daily";
     const ctx: AdapterContext = {
       runId: `history_${target}`,
       now:
@@ -65,7 +69,12 @@ async function main() {
     for (const adapter of lendingAdapters.filter(
       (adapter) => !adapterFilter.length || adapterFilter.includes(adapter.id),
     )) {
-      const adapterChains = chainsForTarget(adapter, target, chainFilter);
+      const adapterChains = chainsForLendingRun({
+        adapter,
+        chainFilter,
+        runMode,
+        dateString: target === "latest" ? undefined : target,
+      });
       if (!adapterChains.length) {
         errors.push({
           adapter: adapter.id,
@@ -75,21 +84,20 @@ async function main() {
       }
       for (const chain of adapterChains) {
         try {
-          const result = await adapter.fetch({
-            ...ctx,
+          const fetchCtx = buildLendingFetchOptions({
+            adapter,
             chain,
-            chains: [chain],
+            ctx,
+            runMode,
             blockNumber: blockNumbers[chain],
-            blockNumbers: filterRecord(blockNumbers, [chain]),
+          });
+          const rows = await adapter.fetch(fetchCtx);
+          const result = buildLendingSnapshotResult({
+            adapterId: adapter.id,
+            ctx: fetchCtx,
+            rows,
           });
           snapshots.push(...result.snapshots);
-          for (const item of result.errors ?? []) {
-            errors.push({
-              adapter: adapter.id,
-              marketId: item.marketId,
-              message: item.message,
-            });
-          }
         } catch (error) {
           errors.push({ adapter: adapter.id, message: errorMessage(error) });
         }
@@ -261,38 +269,6 @@ function selectedChains(chainFilter: string[]): Chain[] {
   }
   const chains = chainFilter.length ? chainFilter : [...SUPPORTED_CHAINS];
   return [...new Set(chains)] as Chain[];
-}
-
-function chainsForTarget(
-  adapter: LendingAdapter,
-  target: string,
-  chainFilter: string[],
-): string[] {
-  const requestedChains = chainFilter.length
-    ? chainFilter
-    : Object.keys(adapter.adapter);
-  if (target === "latest") {
-    return adapter.dataAvailability.current
-      ? requestedChains.filter((chain) => adapter.adapter[chain])
-      : [];
-  }
-
-  return requestedChains.filter((chain) => {
-    const historyStart =
-      adapter.dataAvailability.history?.startDateByChain[chain];
-    return Boolean(historyStart && target >= historyStart);
-  });
-}
-
-function filterRecord<T>(
-  record: Partial<Record<string, T>>,
-  keys: string[],
-): Partial<Record<string, T>> {
-  return Object.fromEntries(
-    keys
-      .map((key) => [key, record[key]])
-      .filter(([, value]) => value !== undefined),
-  );
 }
 
 function stringifyBlockNumbers(
