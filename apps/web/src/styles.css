@@ -1512,6 +1512,164 @@ select {
   padding: 0 12px;
 }
 
+.skeleton-page {
+  pointer-events: none;
+}
+
+.skeleton-card {
+  position: relative;
+}
+
+.skeleton-title {
+  padding: 16px;
+}
+
+.skeleton-line,
+.skeleton-dot,
+.skeleton-avatar,
+.skeleton-block {
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #171717 0%, #242424 42%, #171717 82%);
+  background-size: 220% 100%;
+  animation: skeleton-pulse 1.25s ease-in-out infinite;
+}
+
+.skeleton-line {
+  width: 86px;
+  height: 12px;
+}
+
+.skeleton-line.short {
+  width: 96px;
+}
+
+.skeleton-line.wide {
+  width: min(220px, 72%);
+}
+
+.skeleton-line.value {
+  width: 92px;
+  margin-left: auto;
+}
+
+.skeleton-line.label {
+  width: 118px;
+  height: 11px;
+}
+
+.skeleton-line.title {
+  width: 190px;
+  height: 22px;
+  margin-bottom: 10px;
+}
+
+.skeleton-line.hero {
+  width: min(320px, 70%);
+  height: 44px;
+}
+
+.skeleton-line.metric {
+  width: 138px;
+  height: 26px;
+  margin: 22px 20px;
+}
+
+.skeleton-line.tab {
+  width: 126px;
+  height: 13px;
+}
+
+.skeleton-line.search {
+  width: 240px;
+  height: 34px;
+}
+
+.skeleton-line.button {
+  width: 90px;
+  height: 34px;
+}
+
+.skeleton-line.chip {
+  width: 76px;
+  height: 23px;
+}
+
+.skeleton-dot,
+.skeleton-avatar {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+}
+
+.skeleton-avatar.large {
+  width: 58px;
+  height: 58px;
+}
+
+.skeleton-block {
+  border-radius: 14px;
+}
+
+.skeleton-block.art {
+  width: 100%;
+  height: 130px;
+  margin: 12px 0 16px;
+}
+
+.skeleton-block.mini-chart {
+  width: calc(100% - 32px);
+  height: 88px;
+  margin: 16px;
+}
+
+.skeleton-block.chart {
+  width: calc(100% - 48px);
+  height: 318px;
+  margin: 34px 24px;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 16px;
+  border-top: 1px solid #1e1e1e;
+}
+
+.skeleton-table {
+  display: grid;
+  min-width: 760px;
+  padding: 8px 0;
+}
+
+.skeleton-table-row {
+  display: grid;
+  grid-template-columns: 34px minmax(160px, 1fr) repeat(4, 96px);
+  align-items: center;
+  gap: 18px;
+  min-height: 64px;
+  padding: 0 24px;
+  border-top: 1px solid #1f1f1f;
+}
+
+.chart-loading {
+  position: absolute;
+  inset: 55px 0 0;
+  z-index: 3;
+  background: #0d0d0d;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 1fr;

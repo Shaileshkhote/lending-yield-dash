@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MarketTable } from "../components/MarketTable";
+import { MarketTableSkeleton } from "../components/Skeletons";
 import { fetchJson, type CurrentMarketsResponse } from "../lib/api";
 
 export function MarketsPage() {
@@ -48,7 +49,7 @@ export function MarketsPage() {
         </div>
       </header>
       <section className="panel">
-        <MarketTable markets={filtered} />
+        {data ? <MarketTable markets={filtered} /> : <MarketTableSkeleton rows={10} />}
       </section>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BookOpen, Home, Lock, Mail, Moon, Percent, Search, SunMedium, WalletCards } from "lucide-react";
+import { BarChart3, BookOpen, Home, Mail, Moon, Search, SunMedium } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,12 +10,6 @@ const nav = [
   { to: "/lending", label: "Home", icon: Home },
   { to: "/lending/markets", label: "Market", icon: BarChart3 },
   { to: "/lending/sources", label: "Research", icon: BookOpen }
-];
-
-const compareNav = [
-  { to: "/lending/markets", label: "APY", icon: Percent },
-  { to: "/lending/quality", label: "TVL", icon: Lock },
-  { to: "/lending/sources", label: "YPO", icon: WalletCards }
 ];
 
 const ticker = [
@@ -43,18 +37,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             return (
               <Link key={item.to} href={item.to} className={`nav-link ${active ? "active" : ""}`}>
                 <Icon size={16} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="nav-section-label">Compare</div>
-        <nav className="side-nav compare-nav">
-          {compareNav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.label} href={item.to} className="nav-link muted">
-                <Icon size={15} />
                 {item.label}
               </Link>
             );

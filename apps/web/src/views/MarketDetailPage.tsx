@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { BarChart3, ExternalLink, Info, Percent, Share2, WalletCards } from "lucide-react";
 import type { ReactNode } from "react";
-import { Brush, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Brush, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { MarketDetailSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse, type HistoryPoint, type LendingMarket, type PoolChartResponse } from "../lib/api";
 
@@ -35,6 +36,7 @@ export function MarketDetailPage() {
   const [chartRange, setChartRange] = useState<ChartRange>("all");
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [isCompactChart, setIsCompactChart] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (!resolvedMarketId) return;
@@ -46,9 +48,10 @@ export function MarketDetailPage() {
 
   useEffect(() => {
     if (!resolvedMarketId || !market) return;
-    fetchJson<PoolChartResponse>(`/api/lending/protocols/${market.protocolSlug}/pools/${resolvedMarketId}/chart?range=${chartRange}`).then((response) =>
-      setHistory(response.data)
-    );
+    setHistoryLoading(true);
+    fetchJson<PoolChartResponse>(`/api/lending/protocols/${market.protocolSlug}/pools/${resolvedMarketId}/chart?range=${chartRange}`)
+      .then((response) => setHistory(response.data))
+      .finally(() => setHistoryLoading(false));
   }, [chartRange, market, resolvedMarketId]);
 
   useEffect(() => {
@@ -103,12 +106,7 @@ export function MarketDetailPage() {
   };
 
   if (!market) {
-    return (
-      <div className="state">
-        <h1>Loading market</h1>
-        <p>{resolvedMarketId}</p>
-      </div>
-    );
+    return <MarketDetailSkeleton />;
   }
 
   return (
@@ -160,7 +158,7 @@ export function MarketDetailPage() {
           </div>
           <div className="asset-chart">
             <ResponsiveContainer width="100%" height={chartHeight}>
-              <LineChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
+              <ComposedChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
                 <CartesianGrid stroke="#171717" vertical={false} />
                 <XAxis dataKey="date" tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={chartRange === "1y" || chartRange === "all" ? 34 : 18} />
                 <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
@@ -168,7 +166,11 @@ export function MarketDetailPage() {
                   contentStyle={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 12, color: "#fff" }}
                   formatter={(value) => [activeChart.format(Number(value)), activeChart.label]}
                 />
-                <Line type="monotone" dataKey={activeChart.dataKey} stroke="#564cff" strokeWidth={2.6} dot={false} connectNulls />
+                {activeChart.kind === "bar" ? (
+                  <Bar dataKey={activeChart.dataKey} fill="#564cff" radius={[5, 5, 0, 0]} maxBarSize={28} />
+                ) : (
+                  <Line type="monotone" dataKey={activeChart.dataKey} stroke="#564cff" strokeWidth={2.6} dot={false} connectNulls />
+                )}
                 <Brush
                   dataKey="date"
                   height={44}
@@ -178,12 +180,19 @@ export function MarketDetailPage() {
                   travellerWidth={8}
                   alwaysShowText={false}
                 >
-                  <LineChart data={chartData}>
-                    <Line type="monotone" dataKey={activeChart.dataKey} stroke="#6f68ff" strokeWidth={1.4} dot={false} connectNulls />
-                  </LineChart>
+                  {activeChart.kind === "bar" ? (
+                    <BarChart data={chartData}>
+                      <Bar dataKey={activeChart.dataKey} fill="#6f68ff" maxBarSize={8} />
+                    </BarChart>
+                  ) : (
+                    <LineChart data={chartData}>
+                      <Line type="monotone" dataKey={activeChart.dataKey} stroke="#6f68ff" strokeWidth={1.4} dot={false} connectNulls />
+                    </LineChart>
+                  )}
                 </Brush>
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
+            {historyLoading && !chartData.length ? <div className="chart-loading"><div className="skeleton-block chart" /></div> : null}
             <strong>stablewatch</strong>
           </div>
           <button className="share-chart" type="button" onClick={handleShare}>
@@ -305,8 +314,13 @@ function chartRangeLabel(range: ChartRange): string {
   return range === "all" ? "All" : range;
 }
 
-function getChartConfig(metric: ChartMetric): { dataKey: "chartSuppliedUsd" | "chartApy" | "chartBorrowedUsd"; label: string; format: (value: number) => string } {
-  if (metric === "supplied") return { dataKey: "chartSuppliedUsd", label: "Total Supplied", format: formatUsd };
-  if (metric === "borrowed") return { dataKey: "chartBorrowedUsd", label: "Borrowed", format: formatUsd };
-  return { dataKey: "chartApy", label: "APY", format: (value) => `${value.toFixed(2)}%` };
+function getChartConfig(metric: ChartMetric): {
+  dataKey: "chartSuppliedUsd" | "chartApy" | "chartBorrowedUsd";
+  label: string;
+  format: (value: number) => string;
+  kind: "bar" | "line";
+} {
+  if (metric === "supplied") return { dataKey: "chartSuppliedUsd", label: "Total Supplied", format: formatUsd, kind: "bar" };
+  if (metric === "borrowed") return { dataKey: "chartBorrowedUsd", label: "Borrowed", format: formatUsd, kind: "bar" };
+  return { dataKey: "chartApy", label: "APY", format: (value) => `${value.toFixed(2)}%`, kind: "line" };
 }

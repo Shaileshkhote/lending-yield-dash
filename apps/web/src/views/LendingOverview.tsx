@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Search, SlidersHorizontal } from "lucide-react";
 import { MarketTable } from "../components/MarketTable";
+import { LendingOverviewSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse } from "../lib/api";
 
@@ -57,7 +58,7 @@ export function LendingOverview() {
   );
 
   if (error) return <StateMessage title="Unable to load lending data" detail={error} />;
-  if (!data) return <StateMessage title="Loading lending markets" detail="Reading materialized analytics cache" />;
+  if (!data) return <LendingOverviewSkeleton />;
 
   return (
     <div className="analytics-page">

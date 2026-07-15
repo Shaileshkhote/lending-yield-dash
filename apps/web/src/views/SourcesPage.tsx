@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PageSkeleton } from "../components/Skeletons";
 import { fetchJson, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
 export function SourcesPage() {
   const [markets, setMarkets] = useState<LendingMarket[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetchJson<CurrentMarketsResponse>("/api/lending/markets/current").then((response) => setMarkets(response.data));
+    fetchJson<CurrentMarketsResponse>("/api/lending/markets/current")
+      .then((response) => setMarkets(response.data))
+      .finally(() => setLoaded(true));
   }, []);
+
+  if (!loaded) return <PageSkeleton rows={6} />;
 
   return (
     <div className="page">

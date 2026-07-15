@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PageSkeleton } from "../components/Skeletons";
 import { fetchJson, type QualityCheck } from "../lib/api";
 
 export function QualityPage() {
   const [checks, setChecks] = useState<QualityCheck[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetchJson<{ checks: QualityCheck[] }>("/api/lending/quality").then((response) => setChecks(response.checks));
+    fetchJson<{ checks: QualityCheck[] }>("/api/lending/quality")
+      .then((response) => setChecks(response.checks))
+      .finally(() => setLoaded(true));
   }, []);
+
+  if (!loaded) return <PageSkeleton rows={7} />;
 
   return (
     <div className="page">
