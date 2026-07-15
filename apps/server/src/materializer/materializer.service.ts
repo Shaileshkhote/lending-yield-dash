@@ -149,6 +149,8 @@ const CHART_METRICS = [
   "isPaused"
 ] as const;
 
+const MIN_CURRENT_SUPPLIED_USD = 10_000;
+
 @Injectable()
 export class MaterializerService {
   private readonly logger = new Logger(MaterializerService.name);
@@ -341,7 +343,7 @@ export class MaterializerService {
         "sourceMethod",
         "sourceContracts"
       FROM "DailyMarketSnapshot"
-      WHERE COALESCE("totalSuppliedUsd", 0) > 0
+      WHERE COALESCE("totalSuppliedUsd", 0) > ${MIN_CURRENT_SUPPLIED_USD}
       ORDER BY "marketId", "date" DESC, "timestamp" DESC
     `);
 
@@ -408,7 +410,7 @@ export class MaterializerService {
         "isPaused",
         "dataQualityScore"
       FROM "DailyMarketSnapshot"
-      WHERE COALESCE("totalSuppliedUsd", 0) > 0
+      WHERE COALESCE("totalSuppliedUsd", 0) > ${MIN_CURRENT_SUPPLIED_USD}
       ORDER BY "marketId", "date" DESC, "timestamp" DESC
     `);
 

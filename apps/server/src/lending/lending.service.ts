@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { PrismaService } from "../db/prisma.service";
 import { MaterializerService } from "../materializer/materializer.service";
 
+const MIN_CURRENT_SUPPLIED_USD = 10_000;
+
 @Injectable()
 export class LendingService {
   private readonly cacheBase = join(process.cwd(), "public", "data");
@@ -57,7 +59,7 @@ export class LendingService {
     };
     return {
       ...current,
-      data: current.data.filter((row) => Number(row.totalSuppliedUsd ?? 0) > 0)
+      data: current.data.filter((row) => Number(row.totalSuppliedUsd ?? 0) > MIN_CURRENT_SUPPLIED_USD)
     };
   }
 
