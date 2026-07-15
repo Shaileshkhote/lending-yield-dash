@@ -81,9 +81,19 @@ export async function queryGraphqlEndpoint<T>(args: {
   const source = args.name ?? args.endpoint;
   const attempts = envPositiveInt("GRAPHQL_RETRIES", 3);
   let lastResult: GraphqlResult<T> | undefined;
+  let lastError: unknown;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const result = await requestGraphql<T>(args.endpoint, body, args.headers);
+    let result: GraphqlResult<T>;
+    try {
+      result = await requestGraphql<T>(args.endpoint, body, args.headers);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) break;
+      await sleep(retryDelayMs(undefined, attempt));
+      continue;
+    }
+
     lastResult = result;
     if (result.ok && !result.json.errors?.length) {
       if (!result.json.data) {
@@ -97,7 +107,9 @@ export async function queryGraphqlEndpoint<T>(args: {
   }
 
   if (!lastResult) {
-    throw new Error(`GraphQL query failed for ${source}: no response`);
+    throw new Error(
+      `GraphQL query failed for ${source}: ${errorMessage(lastError)}`,
+    );
   }
   const message = lastResult.json.errors?.map((error) => error.message).join(" | ") || lastResult.statusText;
   throw new Error(`GraphQL query failed for ${source}: ${message}`);
@@ -169,7 +181,8 @@ async function requestGraphql<T>(
       "content-type": "application/json",
       ...headers
     },
-    body
+    body,
+    signal: AbortSignal.timeout(envPositiveInt("GRAPHQL_TIMEOUT_MS", 30_000)),
   });
   const text = await response.text();
   let json: GraphqlResponse<T>;
@@ -213,10 +226,10 @@ function isRetryableGraphqlError(result: {
 }
 
 function retryDelayMs(
-  result: { retryAfterMs?: number },
+  result: { retryAfterMs?: number } | undefined,
   attempt: number,
 ): number {
-  const retryAfter = result.retryAfterMs;
+  const retryAfter = result?.retryAfterMs;
   if (retryAfter !== undefined) return retryAfter;
 
   const base = envNonNegativeInt("GRAPHQL_RETRY_BASE_MS", 1_000);
@@ -265,6 +278,10 @@ function endpointMinIntervalMs(endpoint: string): number {
     );
   }
   return envNonNegativeInt("GRAPHQL_ENDPOINT_MIN_INTERVAL_MS", 0);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function envPositiveInt(name: string, fallback: number): number {
