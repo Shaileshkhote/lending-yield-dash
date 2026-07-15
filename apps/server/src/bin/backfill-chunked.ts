@@ -65,6 +65,8 @@ const WRITE_CONCURRENCY = envInt(
 );
 const MARKET_RETRIES = envInt("BACKFILL_MARKET_RETRIES", 3);
 const BLOCK_RETRIES = envInt("BACKFILL_BLOCK_RETRIES", 4);
+const DATE_SLEEP_MS = envNonNegativeInt("BACKFILL_DATE_SLEEP_MS", 0);
+const CHUNK_SLEEP_MS = envNonNegativeInt("BACKFILL_CHUNK_SLEEP_MS", 0);
 const FORCE_BACKFILL = process.env.BACKFILL_FORCE === "1";
 const SHUFFLE_WORK = process.env.BACKFILL_SHUFFLE !== "0";
 
@@ -111,7 +113,7 @@ async function main() {
     const summaries: ChunkSummary[] = [];
 
     console.log(
-      `[chunked-backfill] range=${range.from}..${range.to} dates=${dates.length} chunkDays=${args.chunkDays} chunks=${runnableWorkItems.length} chunkConcurrency=${CHUNK_CONCURRENCY} dateConcurrency=${DATE_CONCURRENCY} writeConcurrency=${WRITE_CONCURRENCY}`,
+      `[chunked-backfill] range=${range.from}..${range.to} dates=${dates.length} chunkDays=${args.chunkDays} chunks=${runnableWorkItems.length} chunkConcurrency=${CHUNK_CONCURRENCY} dateConcurrency=${DATE_CONCURRENCY} writeConcurrency=${WRITE_CONCURRENCY} dateSleepMs=${DATE_SLEEP_MS} chunkSleepMs=${CHUNK_SLEEP_MS}`,
     );
 
     await mapWithConcurrency(
@@ -238,11 +240,17 @@ async function runChunk(args: {
       assetFilter,
       summary,
     });
+    if (DATE_SLEEP_MS > 0) {
+      await sleep(DATE_SLEEP_MS);
+    }
   });
 
   console.log(
     `[chunked-backfill] ${chunk} ${item.adapter.id} ${item.chain} done snapshots=${summary.snapshots} errors=${summary.errors.length}`,
   );
+  if (CHUNK_SLEEP_MS > 0) {
+    await sleep(CHUNK_SLEEP_MS);
+  }
   return summary;
 }
 
@@ -747,6 +755,13 @@ function csvEnv(envKey: string): string[] {
 function csvEnvWithDefault(envKey: string, fallback: string[]): string[] {
   const value = csvEnv(envKey);
   return value.length ? value : fallback;
+}
+
+function envNonNegativeInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : fallback;
 }
 
 function valueArg(args: string[], prefix: string): string | undefined {
