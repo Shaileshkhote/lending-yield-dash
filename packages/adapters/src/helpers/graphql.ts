@@ -233,11 +233,11 @@ function retryDelayMs(
   result: { retryAfterMs?: number } | undefined,
   attempt: number,
 ): number {
+  const max = envPositiveInt("GRAPHQL_RETRY_MAX_MS", 30_000);
   const retryAfter = result?.retryAfterMs;
-  if (retryAfter !== undefined) return retryAfter;
+  if (retryAfter !== undefined) return Math.min(max, retryAfter);
 
   const base = envNonNegativeInt("GRAPHQL_RETRY_BASE_MS", 1_000);
-  const max = envPositiveInt("GRAPHQL_RETRY_MAX_MS", 30_000);
   const jitter = Math.floor(Math.random() * Math.max(250, base));
   return Math.min(max, base * 2 ** (attempt - 1) + jitter);
 }
