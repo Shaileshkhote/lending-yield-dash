@@ -3,6 +3,7 @@ import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { sha256 } from "@stablewatch-lending/core";
+import { Prisma } from "@stablewatch-lending/db";
 import { PrismaService } from "../db/prisma.service";
 import { R2StorageService } from "./r2-storage.service";
 import { envInt, mapWithConcurrency } from "../utils/concurrency";
@@ -93,6 +94,17 @@ type SnapshotLike = {
   dataQualityScore: number;
   isActive: boolean;
   isPaused: boolean;
+};
+
+type CurrentDailySnapshotRow = SnapshotLike & {
+  ltv: number | null;
+  liquidationThreshold: number | null;
+  reserveFactor: number | null;
+  supplyCapUsd: number | null;
+  borrowCapUsd: number | null;
+  sourceMethod: string;
+  sourcePayloadHash: string;
+  sourceContracts: unknown;
 };
 
 const TIMESERIES_METRICS = [
@@ -288,16 +300,40 @@ export class MaterializerService {
   }
 
   async currentMarkets(): Promise<{ generatedAt: string; status: "success"; data: CurrentMarketRow[] }> {
-    const snapshots = await this.prisma.dailyMarketSnapshot.findMany({
-      orderBy: [{ date: "desc" }, { timestamp: "desc" }]
-    });
-
-    const seen = new Set<string>();
-    const latest = snapshots.filter((snapshot) => {
-      if (seen.has(snapshot.marketId)) return false;
-      seen.add(snapshot.marketId);
-      return true;
-    });
+    const latest = await this.prisma.$queryRaw<CurrentDailySnapshotRow[]>(Prisma.sql`
+      SELECT DISTINCT ON ("marketId")
+        "marketId",
+        "timestamp",
+        "blockNumber",
+        "protocol",
+        "adapterId",
+        "chain",
+        "marketType",
+        "assetSymbol",
+        "assetAddress",
+        "supplyApy",
+        "borrowApy",
+        "rewardSupplyApy",
+        "rewardBorrowApy",
+        "netSupplyApy",
+        "totalSuppliedUsd",
+        "totalBorrowedUsd",
+        "availableLiquidityUsd",
+        "utilization",
+        "ltv",
+        "liquidationThreshold",
+        "reserveFactor",
+        "supplyCapUsd",
+        "borrowCapUsd",
+        "isActive",
+        "isPaused",
+        "dataQualityScore",
+        "sourcePayloadHash",
+        "sourceMethod",
+        "sourceContracts"
+      FROM "DailyMarketSnapshot"
+      ORDER BY "marketId", "date" DESC, "timestamp" DESC
+    `);
 
     return {
       generatedAt: new Date().toISOString(),
