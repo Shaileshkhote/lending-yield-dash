@@ -341,6 +341,7 @@ export class MaterializerService {
         "sourceMethod",
         "sourceContracts"
       FROM "DailyMarketSnapshot"
+      WHERE COALESCE("totalSuppliedUsd", 0) > 0
       ORDER BY "marketId", "date" DESC, "timestamp" DESC
     `);
 
@@ -407,6 +408,7 @@ export class MaterializerService {
         "isPaused",
         "dataQualityScore"
       FROM "DailyMarketSnapshot"
+      WHERE COALESCE("totalSuppliedUsd", 0) > 0
       ORDER BY "marketId", "date" DESC, "timestamp" DESC
     `);
 

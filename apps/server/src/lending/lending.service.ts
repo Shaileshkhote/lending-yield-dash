@@ -52,7 +52,13 @@ export class LendingService {
   }
 
   async current() {
-    return this.cachedJson("lending/current-lite.json", () => this.materializer.currentLiteMarkets());
+    const current = (await this.cachedJson("lending/current-lite.json", () => this.materializer.currentLiteMarkets())) as {
+      data: Array<Record<string, unknown>>;
+    };
+    return {
+      ...current,
+      data: current.data.filter((row) => Number(row.totalSuppliedUsd ?? 0) > 0)
+    };
   }
 
   async protocol(protocol: string) {
