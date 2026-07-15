@@ -7,6 +7,7 @@ import { MarketTable } from "../components/MarketTable";
 import { LendingOverviewSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse } from "../lib/api";
+import { assetTypeForMarket, assetTypeOptions } from "../lib/asset-types";
 
 export function LendingOverview() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export function LendingOverview() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [chainFilter, setChainFilter] = useState("all");
-  const [rangeFilter, setRangeFilter] = useState("all");
+  const [assetTypeFilter, setAssetTypeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
@@ -36,20 +37,17 @@ export function LendingOverview() {
   const categories = useMemo(() => [...new Set(rows.map((row) => row.protocol))].sort(), [rows]);
   const filteredRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    const rangeDays = rangeFilter === "all" ? null : Number(rangeFilter.replace("d", ""));
-    const now = Date.now();
     const visibleRows = rows.filter((row) => {
       const matchesQuery = normalized
         ? [row.assetSymbol, row.protocol, row.chain, row.marketId].some((value) => value.toLowerCase().includes(normalized))
         : true;
       const matchesChain = chainFilter === "all" || row.chain === chainFilter;
       const matchesCategory = categoryFilter === "all" || row.protocol === categoryFilter;
-      const lastUpdated = Date.parse(row.lastUpdated);
-      const matchesRange = !rangeDays || !Number.isFinite(lastUpdated) || now - lastUpdated <= rangeDays * 24 * 60 * 60 * 1000;
-      return matchesQuery && matchesChain && matchesCategory && matchesRange;
+      const matchesAssetType = assetTypeFilter === "all" || assetTypeForMarket(row) === assetTypeFilter;
+      return matchesQuery && matchesChain && matchesCategory && matchesAssetType;
     });
     return [...visibleRows].sort((a, b) => (b.totalSuppliedUsd ?? 0) - (a.totalSuppliedUsd ?? 0));
-  }, [categoryFilter, chainFilter, query, rangeFilter, rows]);
+  }, [assetTypeFilter, categoryFilter, chainFilter, query, rows]);
 
   const trending = useMemo(
     () =>
@@ -131,7 +129,7 @@ export function LendingOverview() {
               if (query.trim()) params.set("q", query.trim());
               if (chainFilter !== "all") params.set("chain", chainFilter);
               if (categoryFilter !== "all") params.set("protocol", categoryFilter);
-              if (rangeFilter !== "all") params.set("range", rangeFilter);
+              if (assetTypeFilter !== "all") params.set("type", assetTypeFilter);
               router.push(`/lending/markets${params.size ? `?${params.toString()}` : ""}`);
             }}
           >
@@ -149,13 +147,11 @@ export function LendingOverview() {
             </select>
           </label>
           <label className="chip-select">
-            <span>Range</span>
-            <select value={rangeFilter} onChange={(event) => setRangeFilter(event.target.value)}>
-              <option value="all">All</option>
-              <option value="7d">7d</option>
-              <option value="30d">30d</option>
-              <option value="90d">90d</option>
-              <option value="365d">1y</option>
+            <span>Asset Type</span>
+            <select value={assetTypeFilter} onChange={(event) => setAssetTypeFilter(event.target.value)}>
+              {assetTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </label>
           <label className="chip-select">
