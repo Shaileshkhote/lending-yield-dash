@@ -9,7 +9,7 @@ import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse, type HistoryPoint, type LendingMarket, type PoolChartResponse } from "../lib/api";
 
 type ChartMetric = "supplied" | "apy" | "borrowed";
-type ChartRange = "7d" | "30d" | "90d" | "1y";
+type ChartRange = "all" | "7d" | "30d" | "90d" | "1y";
 
 const chartTabs: Array<{ key: ChartMetric; label: string }> = [
   { key: "supplied", label: "Total Supplied" },
@@ -17,7 +17,13 @@ const chartTabs: Array<{ key: ChartMetric; label: string }> = [
   { key: "borrowed", label: "Borrowed" }
 ];
 
-const chartRanges: ChartRange[] = ["7d", "30d", "90d", "1y"];
+const chartRanges: Array<{ value: ChartRange; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "7d", label: "7d" },
+  { value: "30d", label: "30d" },
+  { value: "90d", label: "90d" },
+  { value: "1y", label: "1y" }
+];
 
 export function MarketDetailPage() {
   const params = useParams<{ marketId?: string | string[] }>();
@@ -26,7 +32,7 @@ export function MarketDetailPage() {
   const [market, setMarket] = useState<LendingMarket | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("apy");
-  const [chartRange, setChartRange] = useState<ChartRange>("30d");
+  const [chartRange, setChartRange] = useState<ChartRange>("all");
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [isCompactChart, setIsCompactChart] = useState(false);
 
@@ -138,7 +144,7 @@ export function MarketDetailPage() {
         <section className="asset-stat-grid">
           <AssetStat icon={<WalletCards size={15} />} label="Supplied" value={formatUsd(market.totalSuppliedUsd)} change={formatSignedPct(-Math.abs((market.utilization ?? 0) / 8))} />
           <AssetStat icon={<BarChart3 size={15} />} label="Borrowed" value={formatUsd(market.totalBorrowedUsd)} />
-          <AssetStat icon={<Percent size={15} />} label="Supply APY" hint={chartRange} value={formatPct(market.netSupplyApy ?? market.supplyApy)} change={formatSignedPct(apyChange)} />
+          <AssetStat icon={<Percent size={15} />} label="Supply APY" hint={chartRangeLabel(chartRange)} value={formatPct(market.netSupplyApy ?? market.supplyApy)} change={formatSignedPct(apyChange)} />
           <AssetStat icon={<Info size={15} />} label="Borrow APY" value={formatPct(market.borrowApy)} />
         </section>
 
@@ -152,7 +158,7 @@ export function MarketDetailPage() {
             <label className="range-select" aria-label="Chart range">
               <select value={chartRange} onChange={(event) => setChartRange(event.target.value as ChartRange)}>
                 {chartRanges.map((range) => (
-                  <option key={range} value={range}>{range}</option>
+                  <option key={range.value} value={range.value}>{range.label}</option>
                 ))}
               </select>
             </label>
@@ -161,7 +167,7 @@ export function MarketDetailPage() {
             <ResponsiveContainer width="100%" height={chartHeight}>
               <LineChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
                 <CartesianGrid stroke="#171717" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={chartRange === "1y" ? 34 : 18} />
+                <XAxis dataKey="date" tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={chartRange === "1y" || chartRange === "all" ? 34 : 18} />
                 <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
                 <Tooltip
                   contentStyle={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 12, color: "#fff" }}
@@ -308,6 +314,10 @@ function formatSignedPct(value: number | null | undefined): string | null {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
+}
+
+function chartRangeLabel(range: ChartRange): string {
+  return range === "all" ? "All" : range;
 }
 
 function getChartConfig(metric: ChartMetric): { dataKey: "chartSuppliedUsd" | "chartApy" | "chartBorrowedUsd"; label: string; format: (value: number) => string } {

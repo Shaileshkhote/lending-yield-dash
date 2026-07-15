@@ -107,6 +107,8 @@ type CurrentDailySnapshotRow = SnapshotLike & {
   sourceContracts: unknown;
 };
 
+type RangeSelection = number | "all";
+
 const TIMESERIES_METRICS = [
   "blockNumber",
   "supplyApy",
@@ -373,10 +375,9 @@ export class MaterializerService {
     };
   }
 
-  async marketHistory(marketId: string, days: number) {
-    const since = rangeStart(days);
+  async marketHistory(marketId: string, range: RangeSelection) {
     const snapshots = await this.prisma.dailyMarketSnapshot.findMany({
-      where: { marketId, date: { gte: since } },
+      where: range === "all" ? { marketId } : { marketId, date: { gte: rangeStart(range) } },
       orderBy: { date: "asc" }
     });
     const rows = dailyRows(snapshots);
@@ -385,7 +386,7 @@ export class MaterializerService {
       generatedAt: new Date().toISOString(),
       status: "success",
       marketId,
-      range: `${days}d`,
+      range: range === "all" ? "all" : `${range}d`,
       granularity: "1d",
       data: rows.map((snapshot) => ({
         date: snapshot.date,
@@ -405,46 +406,43 @@ export class MaterializerService {
     };
   }
 
-  async protocolTimeseries(protocolSlug: string, days: number) {
-    const since = rangeStart(days);
+  async protocolTimeseries(protocolSlug: string, range: RangeSelection) {
     const snapshots = await this.prisma.dailyMarketSnapshot.findMany({
-      where: { adapterId: protocolSlug, date: { gte: since } },
+      where: range === "all" ? { adapterId: protocolSlug } : { adapterId: protocolSlug, date: { gte: rangeStart(range) } },
       orderBy: { date: "asc" }
     });
     return timeseriesPayload({
       generatedAt: new Date().toISOString(),
       scope: "protocol",
       scopeId: protocolSlug,
-      days,
+      range,
       snapshots
     });
   }
 
-  async marketTimeseries(marketId: string, days: number) {
-    const since = rangeStart(days);
+  async marketTimeseries(marketId: string, range: RangeSelection) {
     const snapshots = await this.prisma.dailyMarketSnapshot.findMany({
-      where: { marketId, date: { gte: since } },
+      where: range === "all" ? { marketId } : { marketId, date: { gte: rangeStart(range) } },
       orderBy: { date: "asc" }
     });
     return timeseriesPayload({
       generatedAt: new Date().toISOString(),
       scope: "market",
       scopeId: marketId,
-      days,
+      range,
       snapshots
     });
   }
 
-  async marketChart(marketId: string, days: number) {
-    const since = rangeStart(days);
+  async marketChart(marketId: string, range: RangeSelection) {
     const snapshots = await this.prisma.dailyMarketSnapshot.findMany({
-      where: { marketId, date: { gte: since } },
+      where: range === "all" ? { marketId } : { marketId, date: { gte: rangeStart(range) } },
       orderBy: { date: "asc" }
     });
     return chartPayload({
       generatedAt: new Date().toISOString(),
       marketId,
-      days,
+      range,
       snapshots
     });
   }
@@ -653,12 +651,12 @@ function dailyRow(snapshot: SnapshotLike): DailySnapshotRow {
 function chartPayload(args: {
   generatedAt: string;
   marketId: string;
-  days?: number;
+  range?: RangeSelection;
   dates?: string[];
   snapshots: SnapshotLike[];
 }) {
-  const requestedDates = args.dates ?? rangeDates(args.days ?? 30);
   const rows = dailyRows(args.snapshots).filter((row) => row.marketId === args.marketId);
+  const requestedDates = args.dates ?? (args.range === "all" ? [...new Set(rows.map((row) => row.date))] : rangeDates(args.range ?? 30));
   const first = rows[0];
   const last = rows[rows.length - 1];
 
@@ -671,7 +669,7 @@ function chartPayload(args: {
     chain: last?.chain ?? first?.chain ?? null,
     assetSymbol: last?.assetSymbol ?? first?.assetSymbol ?? null,
     assetAddress: last?.assetAddress ?? first?.assetAddress ?? null,
-    range: args.days ? `${args.days}d` : `${requestedDates[0] ?? "empty"}:${requestedDates[requestedDates.length - 1] ?? "empty"}`,
+    range: args.range === "all" ? "all" : typeof args.range === "number" ? `${args.range}d` : `${requestedDates[0] ?? "empty"}:${requestedDates[requestedDates.length - 1] ?? "empty"}`,
     granularity: "1d",
     requestedRange: {
       days: requestedDates.length,
@@ -707,12 +705,12 @@ function timeseriesPayload(args: {
   generatedAt: string;
   scope: "protocol" | "market";
   scopeId: string;
-  days?: number;
+  range?: RangeSelection;
   dates?: string[];
   snapshots: SnapshotLike[];
 }) {
-  const timestamps = args.dates ?? rangeDates(args.days ?? 30);
   const rows = dailyRows(args.snapshots);
+  const timestamps = args.dates ?? (args.range === "all" ? [...new Set(rows.map((row) => row.date))].sort() : rangeDates(args.range ?? 30));
   const rowsByMarket = new Map<string, Map<string, DailySnapshotRow>>();
   for (const row of rows) {
     const marketRows = rowsByMarket.get(row.marketId) ?? new Map<string, DailySnapshotRow>();
@@ -753,7 +751,7 @@ function timeseriesPayload(args: {
     status: "success",
     scope: args.scope,
     scopeId: args.scopeId,
-    range: args.days ? `${args.days}d` : `${timestamps[0] ?? "empty"}:${timestamps[timestamps.length - 1] ?? "empty"}`,
+    range: args.range === "all" ? "all" : typeof args.range === "number" ? `${args.range}d` : `${timestamps[0] ?? "empty"}:${timestamps[timestamps.length - 1] ?? "empty"}`,
     granularity: "1d",
     requestedRange: {
       days: timestamps.length,

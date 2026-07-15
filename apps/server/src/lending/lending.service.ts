@@ -67,9 +67,10 @@ export class LendingService {
       );
     }
 
-    const days = rangeToDays(range);
-    return this.cachedJson(`lending/protocols/${protocol}/timeseries-${days}d-1d.json`, () =>
-      this.materializer.protocolTimeseries(protocol, days)
+    const parsedRange = rangeToDays(range);
+    const rangeKey = parsedRange === "all" ? "all" : `${parsedRange}d`;
+    return this.cachedJson(`lending/protocols/${protocol}/timeseries-${rangeKey}-1d.json`, () =>
+      this.materializer.protocolTimeseries(protocol, parsedRange)
     );
   }
 
@@ -84,9 +85,10 @@ export class LendingService {
       );
     }
 
-    const days = rangeToDays(range);
-    return this.cachedJson(`lending/protocols/${protocol}/pools/${marketId}/chart-${days}d.json`, () =>
-      this.materializer.marketChart(marketId, days)
+    const parsedRange = rangeToDays(range);
+    const rangeKey = parsedRange === "all" ? "all" : `${parsedRange}d`;
+    return this.cachedJson(`lending/protocols/${protocol}/pools/${marketId}/chart-${rangeKey}.json`, () =>
+      this.materializer.marketChart(marketId, parsedRange)
     );
   }
 
@@ -118,8 +120,7 @@ export class LendingService {
   }
 
   async history(marketId: string, range: string) {
-    const days = rangeToDays(range);
-    return this.materializer.marketHistory(marketId, days);
+    return this.materializer.marketHistory(marketId, rangeToDays(range));
   }
 
   async quality() {
@@ -169,7 +170,8 @@ export class LendingService {
   }
 }
 
-function rangeToDays(range: string): number {
+function rangeToDays(range: string): number | "all" {
+  if (range === "all" || range === "max" || range === "full") return "all";
   if (range === "7d") return 7;
   if (range === "90d") return 90;
   if (range === "1y" || range === "365d" || range === "year") return 365;
