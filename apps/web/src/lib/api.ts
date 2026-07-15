@@ -158,8 +158,9 @@ export function poolLinks(market: LendingMarket): { app: string; docs: string } 
     };
   }
   if (market.protocolSlug === "spark") {
+    const chainId = sparkChainId(chain);
     return {
-      app: `https://app.spark.fi/markets/${address}`,
+      app: chainId ? `https://app.spark.fi/markets/${chainId}/${address}` : "https://app.spark.fi/markets",
       docs: "https://docs.spark.fi/",
     };
   }
@@ -172,4 +173,9 @@ export function poolLinks(market: LendingMarket): { app: string; docs: string } 
 function aaveMarketName(chain: string): string {
   if (chain === "ethereum") return "proto_mainnet_v3";
   return `proto_${chain}_v3`;
+}
+
+function sparkChainId(chain: string): number | null {
+  if (chain === "ethereum") return 1;
+  return null;
 }
