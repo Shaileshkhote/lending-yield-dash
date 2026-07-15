@@ -97,6 +97,10 @@ export async function queryGraphqlEndpoint<T>(args: {
     }
 
     lastResult = result;
+    const cooldownMessage = providerCooldownMessage(result, source);
+    if (cooldownMessage) {
+      throw new Error(cooldownMessage);
+    }
     if (result.ok && !result.json.errors?.length) {
       if (!result.json.data) {
         throw new Error(`GraphQL query returned no data for ${source}`);
@@ -240,6 +244,20 @@ function retryDelayMs(
   const base = envNonNegativeInt("GRAPHQL_RETRY_BASE_MS", 1_000);
   const jitter = Math.floor(Math.random() * Math.max(250, base));
   return Math.min(max, base * 2 ** (attempt - 1) + jitter);
+}
+
+function providerCooldownMessage(
+  result: GraphqlResult<unknown>,
+  source: string,
+): string | undefined {
+  const retryAfter = result.retryAfterMs;
+  if (!retryAfter) return undefined;
+  const cooldownThreshold = envPositiveInt(
+    "GRAPHQL_PROVIDER_COOLDOWN_THRESHOLD_MS",
+    5 * 60_000,
+  );
+  if (retryAfter <= cooldownThreshold) return undefined;
+  return `GraphQL provider cooldown for ${source}: retry after ${Math.ceil(retryAfter / 1000)}s`;
 }
 
 function retryAfterMs(value: string | null): number | undefined {
