@@ -60,7 +60,6 @@ export function MarketTable({ markets }: Props) {
                 </button>
               </th>
             ))}
-            <th>Pool</th>
           </tr>
         </thead>
         <tbody>
@@ -80,10 +79,10 @@ export function MarketTable({ markets }: Props) {
               <td>{formatUsd(market.totalSuppliedUsd)}</td>
               <td>{formatUsd(market.totalBorrowedUsd)}</td>
               <td>{formatPct(market.utilization)}</td>
-              <td><span className={apyTone(market.sevenDayApy ?? market.netSupplyApy ?? market.supplyApy)}>{formatPct(market.sevenDayApy ?? market.netSupplyApy ?? market.supplyApy)}</span></td>
+              <td><span className={apyTone(market.sevenDayApy)}>{formatPct(market.sevenDayApy)}</span></td>
               <td><span className={apyTone(market.apySevenDayChange)}>{formatSignedPct(market.apySevenDayChange)}</span></td>
-              <td><span className={apyTone(market.thirtyDayApy ?? market.netSupplyApy ?? market.supplyApy)}>{formatPct(market.thirtyDayApy ?? market.netSupplyApy ?? market.supplyApy)}</span></td>
-              <td><span className={apyTone(market.borrowApy)}>{formatSignedPct(market.borrowApy)}</span></td>
+              <td><span className={apyTone(market.thirtyDayApy)}>{formatPct(market.thirtyDayApy)}</span></td>
+              <td><span className={apyTone(market.borrowApy)}>{formatPct(market.borrowApy)}</span></td>
               <td>
                 <HealthBadge market={market} />
               </td>
@@ -116,9 +115,9 @@ function sortValue(market: LendingMarket, key: SortKey): string | number {
   if (key === "supplied") return market.totalSuppliedUsd ?? 0;
   if (key === "borrowed") return market.totalBorrowedUsd ?? 0;
   if (key === "utilization") return market.utilization ?? 0;
-  if (key === "sevenDayApy") return market.sevenDayApy ?? market.netSupplyApy ?? market.supplyApy ?? 0;
+  if (key === "sevenDayApy") return market.sevenDayApy ?? Number.NEGATIVE_INFINITY;
   if (key === "apySevenDayChange") return market.apySevenDayChange ?? 0;
-  if (key === "thirtyDayApy") return market.thirtyDayApy ?? market.netSupplyApy ?? market.supplyApy ?? 0;
+  if (key === "thirtyDayApy") return market.thirtyDayApy ?? Number.NEGATIVE_INFINITY;
   if (key === "borrowApy") return market.borrowApy ?? 0;
   return market.dataQualityScore ?? 0;
 }
