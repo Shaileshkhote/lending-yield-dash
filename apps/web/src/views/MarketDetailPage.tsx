@@ -9,7 +9,7 @@ import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse, type HistoryPoint, type LendingMarket, type PoolChartResponse } from "../lib/api";
 
 type ChartMetric = "supplied" | "apy" | "borrowed";
-type ChartRange = "7d" | "30d" | "90d";
+type ChartRange = "7d" | "30d" | "90d" | "1y";
 
 const chartTabs: Array<{ key: ChartMetric; label: string }> = [
   { key: "supplied", label: "Total Supplied" },
@@ -17,7 +17,7 @@ const chartTabs: Array<{ key: ChartMetric; label: string }> = [
   { key: "borrowed", label: "Borrowed" }
 ];
 
-const chartRanges: ChartRange[] = ["7d", "30d", "90d"];
+const chartRanges: ChartRange[] = ["7d", "30d", "90d", "1y"];
 
 export function MarketDetailPage() {
   const params = useParams<{ marketId?: string | string[] }>();
@@ -28,6 +28,7 @@ export function MarketDetailPage() {
   const [chartMetric, setChartMetric] = useState<ChartMetric>("apy");
   const [chartRange, setChartRange] = useState<ChartRange>("30d");
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
+  const [isCompactChart, setIsCompactChart] = useState(false);
 
   useEffect(() => {
     if (!resolvedMarketId) return;
@@ -43,6 +44,13 @@ export function MarketDetailPage() {
       setHistory(response.data)
     );
   }, [chartRange, market, resolvedMarketId]);
+
+  useEffect(() => {
+    const update = () => setIsCompactChart(window.innerWidth <= 860);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const chartData = useMemo(
     () =>
@@ -69,6 +77,8 @@ export function MarketDetailPage() {
   }, [chartData]);
 
   const borrowedShare = market?.totalSuppliedUsd ? ((market.totalBorrowedUsd ?? 0) / market.totalSuppliedUsd) * 100 : null;
+  const chartHeight = isCompactChart ? 360 : 430;
+  const brushY = isCompactChart ? 292 : 348;
   const activeChart = useMemo(() => {
     const config = getChartConfig(chartMetric);
     const values = chartData.map((point) => Number(point[config.dataKey] ?? 0));
@@ -128,7 +138,7 @@ export function MarketDetailPage() {
         <section className="asset-stat-grid">
           <AssetStat icon={<WalletCards size={15} />} label="Supplied" value={formatUsd(market.totalSuppliedUsd)} change={formatSignedPct(-Math.abs((market.utilization ?? 0) / 8))} />
           <AssetStat icon={<BarChart3 size={15} />} label="Borrowed" value={formatUsd(market.totalBorrowedUsd)} />
-          <AssetStat icon={<Percent size={15} />} label="Supply APY" hint="30d" value={formatPct(market.netSupplyApy ?? market.supplyApy)} change={formatSignedPct(apyChange)} />
+          <AssetStat icon={<Percent size={15} />} label="Supply APY" hint={chartRange} value={formatPct(market.netSupplyApy ?? market.supplyApy)} change={formatSignedPct(apyChange)} />
           <AssetStat icon={<Info size={15} />} label="Borrow APY" value={formatPct(market.borrowApy)} />
         </section>
 
@@ -148,10 +158,10 @@ export function MarketDetailPage() {
             </label>
           </div>
           <div className="asset-chart">
-            <ResponsiveContainer width="100%" height={430}>
-              <LineChart data={chartData} margin={{ top: 28, right: 36, left: 24, bottom: 92 }}>
+            <ResponsiveContainer width="100%" height={chartHeight}>
+              <LineChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
                 <CartesianGrid stroke="#171717" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="date" tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={chartRange === "1y" ? 34 : 18} />
                 <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
                 <Tooltip
                   contentStyle={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 12, color: "#fff" }}
@@ -161,7 +171,7 @@ export function MarketDetailPage() {
                 <Brush
                   dataKey="date"
                   height={44}
-                  y={348}
+                  y={brushY}
                   stroke="#9aa0ff"
                   fill="#25294d"
                   travellerWidth={8}

@@ -1609,3 +1609,277 @@ select {
     overflow-x: auto;
   }
 }
+
+@media (max-width: 860px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    padding: 14px 12px 10px;
+  }
+
+  .brand {
+    margin: 0 8px 14px;
+    font-size: 23px;
+  }
+
+  .side-nav {
+    gap: 8px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .side-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-link {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 7px 13px;
+    white-space: nowrap;
+  }
+
+  .topbar {
+    height: 58px;
+    padding: 10px 0;
+  }
+
+  .ticker-strip {
+    gap: 24px;
+    padding-left: 14px;
+    padding-right: 14px;
+    overflow-x: auto;
+    mask-image: none;
+    scrollbar-width: none;
+  }
+
+  .ticker-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .main {
+    width: 100%;
+    min-width: 0;
+    padding: 16px 12px 28px;
+  }
+
+  .payout-card strong {
+    font-size: clamp(32px, 11vw, 46px);
+    letter-spacing: 0.02em;
+  }
+
+  .mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-tabs {
+    gap: 18px;
+    min-height: 50px;
+    padding: 0 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .category-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-tabs button,
+  .category-tabs a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 14px 8px;
+  }
+
+  .table-search {
+    width: 100%;
+  }
+
+  .view-button {
+    justify-content: center;
+  }
+
+  .chip-row {
+    padding: 0 14px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip-select {
+    flex: 0 0 auto;
+  }
+
+  .table-wrap {
+    margin: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .market-table {
+    min-width: 760px;
+    font-size: 13px;
+  }
+
+  .market-table th,
+  .market-table td {
+    height: 56px;
+    padding: 0 14px;
+  }
+
+  .asset-detail-page {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .asset-side-rail {
+    gap: 16px;
+    padding-top: 0;
+  }
+
+  .asset-hero {
+    gap: 16px;
+    align-items: flex-start;
+    padding: 18px 0;
+  }
+
+  .chain-stack {
+    flex-shrink: 0;
+  }
+
+  .asset-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .asset-stat-card {
+    min-height: 96px;
+    padding: 14px;
+  }
+
+  .asset-stat-card strong {
+    margin-top: 18px;
+    font-size: 19px;
+  }
+
+  .asset-stat-card b {
+    right: 12px;
+    bottom: 13px;
+  }
+
+  .asset-chart-card {
+    min-height: 500px;
+  }
+
+  .asset-chart-tabs {
+    gap: 14px;
+    min-height: auto;
+    padding: 12px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .asset-chart-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .asset-chart-tabs button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    white-space: nowrap;
+  }
+
+  .range-select {
+    flex: 0 0 auto;
+    margin-left: 0;
+  }
+
+  .asset-chart {
+    height: 390px;
+  }
+
+  .asset-chart strong {
+    font-size: clamp(42px, 15vw, 70px);
+    letter-spacing: 0;
+  }
+
+  .asset-chart-line {
+    left: 50px;
+    right: 18px;
+    width: calc(100% - 68px);
+  }
+
+  .asset-chart-mini-line {
+    left: 56px;
+    width: calc(100% - 76px);
+  }
+
+  .share-chart {
+    right: 14px;
+    bottom: 18px;
+  }
+
+  .asset-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-info-card dl,
+  .source-grid,
+  .source-card dl {
+    grid-template-columns: 1fr;
+    padding: 0 16px 12px;
+  }
+
+  .asset-info-card dt,
+  .asset-info-card dd {
+    min-height: 0;
+  }
+
+  .asset-info-card dd {
+    justify-content: flex-start;
+    padding-top: 6px;
+    text-align: left;
+  }
+
+  .sw-footer {
+    gap: 18px;
+  }
+
+  .sw-footer h2 {
+    margin-bottom: 0;
+  }
+
+  .sw-footer span {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 420px) {
+  .asset-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-hero {
+    flex-direction: column;
+  }
+
+  .asset-chart-card {
+    min-height: 470px;
+  }
+
+  .asset-chart {
+    height: 360px;
+  }
+}

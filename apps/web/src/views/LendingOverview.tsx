@@ -150,6 +150,7 @@ export function LendingOverview() {
               <option value="7d">7d</option>
               <option value="30d">30d</option>
               <option value="90d">90d</option>
+              <option value="365d">1y</option>
             </select>
           </label>
           <label className="chip-select">

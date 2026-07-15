@@ -67,7 +67,7 @@ export class LendingService {
       );
     }
 
-    const days = range === "7d" ? 7 : range === "90d" ? 90 : 30;
+    const days = rangeToDays(range);
     return this.cachedJson(`lending/protocols/${protocol}/timeseries-${days}d-1d.json`, () =>
       this.materializer.protocolTimeseries(protocol, days)
     );
@@ -84,7 +84,7 @@ export class LendingService {
       );
     }
 
-    const days = range === "7d" ? 7 : range === "90d" ? 90 : 30;
+    const days = rangeToDays(range);
     return this.cachedJson(`lending/protocols/${protocol}/pools/${marketId}/chart-${days}d.json`, () =>
       this.materializer.marketChart(marketId, days)
     );
@@ -118,7 +118,7 @@ export class LendingService {
   }
 
   async history(marketId: string, range: string) {
-    const days = range === "7d" ? 7 : range === "90d" ? 90 : 30;
+    const days = rangeToDays(range);
     return this.materializer.marketHistory(marketId, days);
   }
 
@@ -167,4 +167,11 @@ export class LendingService {
       qualityChecks: snapshot.qualityChecks
     };
   }
+}
+
+function rangeToDays(range: string): number {
+  if (range === "7d") return 7;
+  if (range === "90d") return 90;
+  if (range === "1y" || range === "365d" || range === "year") return 365;
+  return 30;
 }
