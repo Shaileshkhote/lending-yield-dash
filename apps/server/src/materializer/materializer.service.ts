@@ -288,9 +288,8 @@ export class MaterializerService {
   }
 
   async currentMarkets(): Promise<{ generatedAt: string; status: "success"; data: CurrentMarketRow[] }> {
-    const snapshots = await this.prisma.marketSnapshot.findMany({
-      orderBy: [{ timestamp: "desc" }],
-      include: { qualityChecks: true }
+    const snapshots = await this.prisma.dailyMarketSnapshot.findMany({
+      orderBy: [{ date: "desc" }, { timestamp: "desc" }]
     });
 
     const seen = new Set<string>();

@@ -31,7 +31,6 @@ model RawMarketSnapshot {
   createdAt    DateTime         @default(now())
   run          IngestionRun     @relation(fields: [runId], references: [id])
   snapshots    MarketSnapshot[]
-  dailySnapshots DailyMarketSnapshot[]
 
   @@index([payloadHash])
   @@index([marketId, createdAt])
@@ -94,7 +93,6 @@ model MarketSnapshot {
   market                Market           @relation(fields: [marketId], references: [id])
   rawSnapshot           RawMarketSnapshot @relation(fields: [rawSnapshotId], references: [id])
   qualityChecks         QualityCheck[]
-  dailySnapshots        DailyMarketSnapshot[]
 
   @@index([marketId, timestamp(sort: Desc)])
   @@index([protocol, chain, assetSymbol])
@@ -138,8 +136,6 @@ model DailyMarketSnapshot {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   market                Market            @relation(fields: [marketId], references: [id])
-  rawSnapshot           RawMarketSnapshot @relation(fields: [rawSnapshotId], references: [id])
-  snapshot              MarketSnapshot    @relation(fields: [snapshotId], references: [id])
 
   @@unique([marketId, date])
   @@index([adapterId, date])
