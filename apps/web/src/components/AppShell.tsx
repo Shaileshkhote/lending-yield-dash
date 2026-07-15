@@ -1,24 +1,14 @@
 "use client";
 
-import { BarChart3, BookOpen, Home, Mail, Moon, Search, SunMedium } from "lucide-react";
+import { BarChart3, BookOpen, Github, Home } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { TokenLogo } from "./TokenLogo";
 
 const nav = [
   { to: "/lending", label: "Home", icon: Home },
   { to: "/lending/markets", label: "Market", icon: BarChart3 },
-  { to: "/lending/sources", label: "Research", icon: BookOpen }
-];
-
-const ticker = [
-  { symbol: "syrupUSDT", value: "$437.93M", change: "-4.3%", tone: "down" },
-  { symbol: "OUSG", value: "$408.12M", change: "-0.6%", tone: "down" },
-  { symbol: "M", value: "$295.11M", change: "-8.6%", tone: "down" },
-  { symbol: "sDAI", value: "$175.22M", change: "+0.5%", tone: "up", chain: "ethereum", address: "0x83F20F44975D03b1b09e64809B757c47f942BEeA" },
-  { symbol: "sGHO", value: "$147.39M", change: "-3.0%", tone: "down" },
-  { symbol: "USDC", value: "$3.18B", change: "-2.4%", tone: "down", chain: "ethereum", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
+  { to: "/lending/sources", label: "Methodology", icon: BookOpen }
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -28,7 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <Link className="brand" href="/lending">
-          stablewatch
+          LendingScope
         </Link>
         <nav className="side-nav">
           {nav.map((item) => {
@@ -44,40 +34,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="telegram-card">
           <button className="telegram-close" type="button">×</button>
-          <p>Stay on the top the trends that define the stablecoin economy</p>
-          <button className="telegram-button" type="button">↗ Join the News Channel</button>
-        </div>
-        <div className="sidebar-bottom">
-          <Moon size={16} />
-          <SunMedium size={15} />
+          <Github className="github-card-logo" size={82} strokeWidth={1.4} />
+          <p>Independent technical prototype inspired by Stablewatch’s upcoming Lending category. Not affiliated with Stablewatch.</p>
+          <a className="telegram-button" href="https://github.com/Shaileshkhote/lending-yield-dash" target="_blank" rel="noreferrer">
+            <Github size={14} />
+            GitHub Repository
+          </a>
         </div>
       </aside>
       <div className="app-content">
-        <header className="topbar">
-          <div className="ticker-strip">
-            {ticker.map((item) => (
-              <div className="ticker-item" key={item.symbol}>
-                <TokenLogo address={item.address} chain={item.chain} symbol={item.symbol} size="ticker" />
-                <div>
-                  <strong>{item.symbol}</strong>
-                  <small>{item.value}</small>
-                </div>
-                <em className={item.tone}>{item.tone === "up" ? "↑" : "↓"}{item.change}</em>
-              </div>
-            ))}
-          </div>
-          <div className="top-actions">
-            <div className="search-pill">
-              <Search size={16} />
-              <span>Search Assets</span>
-              <kbd>⌘K</kbd>
-            </div>
-            <button className="contact-button" type="button">
-              <Mail size={16} />
-              Contact
-            </button>
-          </div>
-        </header>
         <main className="main">{children}</main>
       </div>
     </div>

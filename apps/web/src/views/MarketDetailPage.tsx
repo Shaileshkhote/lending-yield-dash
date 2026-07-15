@@ -160,7 +160,7 @@ export function MarketDetailPage() {
           <div className="asset-chart">
             <ResponsiveContainer width="100%" height={chartHeight}>
               <ComposedChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
-                <CartesianGrid stroke="#171717" vertical={false} />
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
                 <XAxis
                   dataKey="date"
                   tick={{ fill: "#777", fontSize: 12 }}
@@ -172,38 +172,38 @@ export function MarketDetailPage() {
                 />
                 <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
                 <Tooltip
-                  contentStyle={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 12, color: "#fff" }}
+                  contentStyle={{ background: "var(--chart-tooltip-bg)", border: "1px solid var(--chart-tooltip-border)", borderRadius: 12, color: "var(--chart-tooltip-text)" }}
                   formatter={(value) => [activeChart.format(Number(value)), activeChart.label]}
                   labelFormatter={(label) => formatChartTooltipDate(String(label))}
                 />
                 {activeChart.kind === "bar" ? (
-                  <Bar dataKey={activeChart.dataKey} fill="#564cff" radius={[5, 5, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey={activeChart.dataKey} fill="var(--chart-primary)" radius={[5, 5, 0, 0]} maxBarSize={28} />
                 ) : (
-                  <Line type="monotone" dataKey={activeChart.dataKey} stroke="#564cff" strokeWidth={2.6} dot={false} connectNulls />
+                  <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary)" strokeWidth={2.6} dot={false} connectNulls />
                 )}
                 <Brush
                   dataKey="date"
                   height={44}
                   y={brushY}
-                  stroke="#9aa0ff"
-                  fill="#25294d"
+                  stroke="var(--chart-brush-stroke)"
+                  fill="var(--chart-brush-bg)"
                   travellerWidth={8}
                   alwaysShowText={false}
                 >
                   {activeChart.kind === "bar" ? (
                     <BarChart data={chartData}>
-                      <Bar dataKey={activeChart.dataKey} fill="#6f68ff" maxBarSize={8} />
+                      <Bar dataKey={activeChart.dataKey} fill="var(--chart-primary-soft)" maxBarSize={8} />
                     </BarChart>
                   ) : (
                     <LineChart data={chartData}>
-                      <Line type="monotone" dataKey={activeChart.dataKey} stroke="#6f68ff" strokeWidth={1.4} dot={false} connectNulls />
+                      <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary-soft)" strokeWidth={1.4} dot={false} connectNulls />
                     </LineChart>
                   )}
                 </Brush>
               </ComposedChart>
             </ResponsiveContainer>
             {historyLoading && !chartData.length ? <div className="chart-loading"><div className="skeleton-block chart" /></div> : null}
-            <strong>stablewatch</strong>
+            <strong>LendingScope</strong>
           </div>
           <button className="share-chart" type="button" onClick={handleShare}>
             <Share2 size={15} />
@@ -256,7 +256,7 @@ export function MarketDetailPage() {
           </div>
           <dl>
             <dt>Method</dt>
-            <dd>{source?.method ?? "Protocol subgraph snapshot"}</dd>
+            <dd>{source?.method ?? "Protocol on-chain events, subgraphs, or Dune data"}</dd>
             <dt>Payload Hash</dt>
             <dd>{source?.payloadHash ?? "Stored in daily market snapshot"}</dd>
             <dt>Contracts</dt>
@@ -283,7 +283,7 @@ export function MarketDetailPage() {
           </div>
           <p>
             {market.assetSymbol} lending on {market.protocol} tracks the current state of the market, including supplied liquidity,
-            borrow demand, utilization, APY, and data provenance collected from protocol subgraphs.
+            borrow demand, utilization, APY, and data provenance collected from protocol on-chain events, subgraphs, and Dune data.
           </p>
           <div className="about-links">
             <a href={links?.app} target="_blank" rel="noreferrer">

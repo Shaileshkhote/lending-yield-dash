@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { ArrowRight, Check, ChevronDown, Columns3, Search, X } from "lucide-react";
+import { Check, ChevronDown, Columns3, Github, Search, X } from "lucide-react";
 import { defaultMarketColumns, hideableMarketColumns, MarketTable, type MarketColumnKey } from "../components/MarketTable";
 import { LendingOverviewSkeleton } from "../components/Skeletons";
-import { TokenLogo } from "../components/TokenLogo";
 import { chainLogoUrls } from "../lib/chains";
-import { fetchJson, formatPct, formatSignedPct, formatUsd, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
+import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse } from "../lib/api";
 import { assetTypeForMarket, assetTypeOptions } from "../lib/asset-types";
 import { tokenLogoUrls } from "../lib/token-icons";
 
@@ -17,13 +16,6 @@ type RangeKey = "supplied" | "sevenDayApy" | "thirtyDayApy";
 type RangeTuple = [number, number];
 type RangeState = Partial<Record<RangeKey, RangeTuple>>;
 type ActiveFilter = { id: string; label: string; onRemove: () => void };
-
-const categoryTabs = [
-  { label: "Lending", enabled: true },
-  { label: "Yield Bearing Stablecoins", enabled: false },
-  { label: "Real World Assets", enabled: false },
-  { label: "Derivatives", enabled: false },
-];
 
 const knownProtocols = ["Aave V3", "Aave V4", "Compound III", "Morpho Blue", "Spark"];
 const protocolIconSlugs: Record<string, string> = {
@@ -38,7 +30,6 @@ const assetTypeIconSymbols: Record<string, string> = {
   bluechips: "WBTC",
   alts: "AAVE",
 };
-const MIN_BENCHMARK_SUPPLIED_USD = 10_000;
 const MIN_REASONABLE_APY = -20;
 const MAX_REASONABLE_APY = 100;
 
@@ -75,12 +66,14 @@ export function LendingOverview() {
     const rows = data?.data ?? [];
     const supplied = rows.reduce((sum, row) => sum + (row.totalSuppliedUsd ?? 0), 0);
     const borrowed = rows.reduce((sum, row) => sum + (row.totalBorrowedUsd ?? 0), 0);
-    const liquidity = rows.reduce((sum, row) => sum + (row.availableLiquidityUsd ?? 0), 0);
-    const benchmarkRows = rows.filter(isBenchmarkMarket);
-    const weightedApy = weightedAverage(benchmarkRows, (row) => row.sevenDayApy);
-    const benchmarkChange = weightedAverage(benchmarkRows, (row) => row.apySevenDayChange);
     const utilization = supplied ? (borrowed / supplied) * 100 : 0;
-    return { supplied, borrowed, liquidity, weightedApy, benchmarkChange, utilization };
+    const protocolCount = new Set(rows.map((row) => row.protocol)).size;
+    const chainCount = new Set(rows.map((row) => row.chain)).size;
+    const syncedCount = rows.filter((row) => {
+      const updatedAt = Date.parse(row.lastUpdated);
+      return Number.isFinite(updatedAt) && Date.now() - updatedAt <= 48 * 60 * 60 * 1000;
+    }).length;
+    return { supplied, borrowed, utilization, protocolCount, chainCount, syncedCount, marketCount: rows.length };
   }, [data]);
 
   const rows = data?.data ?? [];
@@ -129,14 +122,6 @@ export function LendingOverview() {
 
   const activeFilterCount = selectedChains.length + selectedProtocols.length + selectedAssetTypes.length + rangeFilterCount;
   const hasFilters = activeFilterCount > 0 || query.trim().length > 0;
-  const marketsHref = useMemo(() => {
-    const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
-    if (selectedChains.length === 1) params.set("chain", selectedChains[0]);
-    if (selectedProtocols.length === 1) params.set("protocol", selectedProtocols[0]);
-    if (selectedAssetTypes.length === 1) params.set("type", selectedAssetTypes[0]);
-    return `/lending/markets${params.size ? `?${params.toString()}` : ""}`;
-  }, [query, selectedAssetTypes, selectedChains, selectedProtocols]);
   const updateRange = (key: RangeKey, value: RangeTuple) => {
     const normalized = normalizeRange(value, rangeBounds[key]);
     setRangeFilters((current) => (sameRange(normalized, rangeBounds[key]) ? omitRange(current, key) : { ...current, [key]: normalized }));
@@ -171,11 +156,16 @@ export function LendingOverview() {
     return filters;
   }, [rangeFilters, selectedAssetTypes, selectedChains, selectedProtocols]);
 
-  const trending = useMemo(
+  const adapterCoverage = useMemo(
     () =>
-      [...rows]
-        .sort((a, b) => (b.totalBorrowedUsd ?? 0) - (a.totalBorrowedUsd ?? 0))
-        .slice(0, 5),
+      [...new Set(rows.map((row) => row.protocol))]
+        .sort()
+        .slice(0, 5)
+        .map((protocol) => ({
+          protocol,
+          markets: rows.filter((row) => row.protocol === protocol).length,
+          supplied: rows.filter((row) => row.protocol === protocol).reduce((sum, row) => sum + (row.totalSuppliedUsd ?? 0), 0)
+        })),
     [rows]
   );
 
@@ -184,110 +174,69 @@ export function LendingOverview() {
 
   return (
     <div className="analytics-page">
+      <section className="prototype-note">
+        <label className="table-search top-market-search">
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by token or protocol" />
+        </label>
+        <div>
+          <a href="/lending/sources">Methodology</a>
+          <a href="https://github.com/Shaileshkhote/lending-yield-dash" target="_blank" rel="noreferrer">
+            <Github size={14} />
+            GitHub
+          </a>
+        </div>
+      </section>
       <section className="hero-grid">
         <article className="analytics-card trending-card">
           <div className="card-title">
             <span className="title-notch" />
-            <span>Trending Borrow</span>
-            <em>7d</em>
+            <span>Adapter Coverage</span>
+            <em>{stats.protocolCount} protocols</em>
           </div>
           <ol className="trending-list">
-            {trending.map((market, index) => (
-              <li key={market.marketId}>
+            {adapterCoverage.map((item, index) => (
+              <li key={item.protocol}>
                 <span className="rank">{index + 1}.</span>
-                <TokenLogo address={market.assetAddress} chain={market.chain} symbol={market.assetSymbol} size="market" />
+                <FilterIcon alt={`${item.protocol} logo`} className="adapter-rank-icon" fallback={item.protocol.slice(0, 1)} sources={protocolIconUrls(item.protocol)} />
                 <span className="trend-copy">
-                  <strong>{market.assetSymbol}</strong>
-                  <small>{market.protocol}</small>
+                  <strong>{item.protocol}</strong>
+                  <small>{item.markets} markets</small>
                 </span>
-                <b>{formatUsd(market.totalBorrowedUsd)}</b>
+                <b>{formatUsd(item.supplied)}</b>
               </li>
             ))}
           </ol>
         </article>
 
         <div className="center-stack">
-          <article className="payout-card">
-            <span>Liquidity Supplied</span>
-            <strong>{formatUsd(stats.supplied)}</strong>
-            <i />
+          <article className="payout-card methodology-payout-card">
+            <span>Data Pipeline</span>
+            <strong>Raw markets into verified lending intelligence</strong>
+            <small>Protocol events, subgraphs, and Dune datasets are normalized into daily snapshots, quality-scored, then materialized to R2 for fast reads.</small>
+            <div className="pipeline-steps" aria-hidden="true">
+              <b>Collect</b>
+              <i />
+              <b>Normalize</b>
+              <i />
+              <b>Verify</b>
+              <i />
+              <b>Serve</b>
+            </div>
           </article>
           <div className="mini-grid">
-            <MetricPanel title="Stablecoin Lending TVL" value={formatUsd(stats.supplied)} change="-6.79%" />
-            <MetricPanel title="Stablewatch Benchmark 7d APY" value={formatPct(stats.weightedApy)} change={formatSignedPct(stats.benchmarkChange)} />
+            <MetricPanel title="Current Supplied" value={formatUsd(stats.supplied)} change="Live cache" />
+            <MetricPanel title="Total Borrowed" value={formatUsd(stats.borrowed)} change={`Utilization ${formatPct(stats.utilization)}`} />
+            <MetricPanel title="Synced Markets" value={`${stats.syncedCount}/${stats.marketCount}`} change={`${stats.chainCount} chains`} />
           </div>
         </div>
-
-        <article className="analytics-card research-card">
-          <div className="card-title">
-            <span className="title-notch" />
-            <span>Research</span>
-            <div className="dots"><i /><i /><i className="active" /></div>
-          </div>
-          <div className="research-art" />
-          <h2>What Is YPO? Yield Paid Out, Explained</h2>
-          <time>MAY 29, 2026</time>
-        </article>
       </section>
 
       <section className="market-panel">
-        <div className="category-tabs">
-          <div className="category-scroll">
-            {categoryTabs.map((tab) => (
-              <button key={tab.label} className={tab.label === "Lending" ? "active" : ""} type="button" disabled={!tab.enabled}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="category-more">
-            <a href={marketsHref}>
-              <span>See more</span>
-              <ArrowRight size={16} />
-            </a>
-          </div>
-        </div>
         <div ref={filtersRef}>
-          <div className="filter-row">
-            <label className="table-search">
-              <Search size={16} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by token or protocol" />
-            </label>
-            <PrettyDropdown
-              label="View"
-              count={hiddenColumnCount}
-              icon={<Columns3 size={15} />}
-              align="end"
-              isOpen={openDropdown === "view"}
-              onToggle={() => setOpenDropdown((open) => (open === "view" ? null : "view"))}
-            >
-              <label className="column-search">
-                <Search size={15} />
-                <input value={columnSearch} onChange={(event) => setColumnSearch(event.target.value)} placeholder="Search columns" />
-                {columnSearch ? (
-                  <button type="button" aria-label="Clear column search" onClick={() => setColumnSearch("")}>
-                    <X size={13} />
-                  </button>
-                ) : null}
-              </label>
-              <div className="dropdown-scroll column-dropdown-scroll">
-                {searchedColumns.length > 0 ? (
-                  searchedColumns.map((column) => {
-                    const selected = visibleColumnSet.has(column.key);
-                    return (
-                      <button key={column.key} className={selected ? "dropdown-option column-option selected" : "dropdown-option column-option"} type="button" onClick={() => toggleColumn(column.key)}>
-                        <span className="column-option-label">{column.label}</span>
-                        {selected ? <Check size={16} /> : null}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <p className="dropdown-empty">No columns found</p>
-                )}
-              </div>
-            </PrettyDropdown>
-          </div>
           <div className="filter-pill-row">
-            <PrettyDropdown label="Chains" count={selectedChains.length} isOpen={openDropdown === "chains"} onToggle={() => setOpenDropdown((open) => (open === "chains" ? null : "chains"))}>
+            <div className="filter-left-group">
+              <PrettyDropdown label="Chains" count={selectedChains.length} isOpen={openDropdown === "chains"} onToggle={() => setOpenDropdown((open) => (open === "chains" ? null : "chains"))}>
               {selectedChains.length >= 2 ? (
                 <div className="match-mode-row">
                   <span>Match mode</span>
@@ -374,9 +323,45 @@ export function LendingOverview() {
                       <span>{option.label}</span>
                       {selectedAssetTypes.includes(option.value) ? <Check size={16} /> : null}
                     </button>
-                  ))}
+                ))}
               </div>
             </PrettyDropdown>
+            </div>
+            <div className="filter-right-group">
+              <PrettyDropdown
+                label="View"
+                count={hiddenColumnCount}
+                icon={<Columns3 size={15} />}
+                align="end"
+                isOpen={openDropdown === "view"}
+                onToggle={() => setOpenDropdown((open) => (open === "view" ? null : "view"))}
+              >
+                <label className="column-search">
+                  <Search size={15} />
+                  <input value={columnSearch} onChange={(event) => setColumnSearch(event.target.value)} placeholder="Search columns" />
+                  {columnSearch ? (
+                    <button type="button" aria-label="Clear column search" onClick={() => setColumnSearch("")}>
+                      <X size={13} />
+                    </button>
+                  ) : null}
+                </label>
+                <div className="dropdown-scroll column-dropdown-scroll">
+                  {searchedColumns.length > 0 ? (
+                    searchedColumns.map((column) => {
+                      const selected = visibleColumnSet.has(column.key);
+                      return (
+                        <button key={column.key} className={selected ? "dropdown-option column-option selected" : "dropdown-option column-option"} type="button" onClick={() => toggleColumn(column.key)}>
+                          <span className="column-option-label">{column.label}</span>
+                          {selected ? <Check size={16} /> : null}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="dropdown-empty">No columns found</p>
+                  )}
+                </div>
+              </PrettyDropdown>
+            </div>
           </div>
         </div>
         {activeFilters.length > 0 ? (
@@ -413,16 +398,6 @@ export function LendingOverview() {
         <div className="loaded-note">All {filteredRows.length} items loaded successfully</div>
       </section>
 
-      <footer className="sw-footer">
-        <h2>stablewatch</h2>
-        <p>The information on stablewatch is for educational purposes only and reflects opinions based on publicly available research. Some data is supplied by third-party sources.</p>
-        <nav>
-          <a>Privacy Policy</a>
-          <a>Terms of Service</a>
-          <a>Cookie Settings</a>
-        </nav>
-        <span>© 2026 stablewatch. All rights reserved.</span>
-      </footer>
     </div>
   );
 }
@@ -438,11 +413,6 @@ function MetricPanel({ title, value, change }: { title: string; value: string; c
         <strong>{value}</strong>
         <em>{change}</em>
       </div>
-      <svg viewBox="0 0 260 88" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 22 C18 9 20 44 38 31 S70 27 88 43 118 40 132 58 151 47 160 66 169 70 174 48 203 55 216 49 227 94 236 51 248 42 260 43 L260 88 L0 88 Z" />
-        <path d="M0 22 C18 9 20 44 38 31 S70 27 88 43 118 40 132 58 151 47 160 66 169 70 174 48 203 55 216 49 227 94 236 51 248 42 260 43" />
-        <circle cx="254" cy="43" r="4" />
-      </svg>
     </article>
   );
 }
@@ -631,34 +601,6 @@ function chainLabel(chain: string) {
     .split("-")
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
     .join(" ");
-}
-
-function isBenchmarkMarket(market: LendingMarket) {
-  const apy = market.sevenDayApy;
-  return (
-    assetTypeForMarket(market) === "stablecoins" &&
-    market.isActive !== false &&
-    !market.isPaused &&
-    (market.dataQualityScore ?? 0) >= 80 &&
-    Number.isFinite(apy) &&
-    Number.isFinite(market.totalSuppliedUsd) &&
-    (market.totalSuppliedUsd ?? 0) >= MIN_BENCHMARK_SUPPLIED_USD &&
-    (apy ?? 0) >= MIN_REASONABLE_APY &&
-    (apy ?? 0) <= MAX_REASONABLE_APY
-  );
-}
-
-function weightedAverage(markets: LendingMarket[], valueForMarket: (market: LendingMarket) => number | null | undefined) {
-  let weight = 0;
-  let weightedValue = 0;
-  for (const market of markets) {
-    const value = valueForMarket(market);
-    const supplied = market.totalSuppliedUsd ?? 0;
-    if (!Number.isFinite(value) || !Number.isFinite(supplied) || supplied <= 0) continue;
-    weight += supplied;
-    weightedValue += supplied * (value ?? 0);
-  }
-  return weight ? weightedValue / weight : null;
 }
 
 function StateMessage({ title, detail }: { title: string; detail: string }) {

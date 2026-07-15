@@ -4,8 +4,8 @@ import { AppShell } from "../components/AppShell";
 import "../styles.css";
 
 export const metadata: Metadata = {
-  title: "Stablewatch Lending",
-  description: "Stablewatch-style lending analytics for stablecoin markets"
+  title: "LendingScope",
+  description: "Independent lending analytics prototype with adapter provenance and quality checks"
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

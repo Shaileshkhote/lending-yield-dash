@@ -1,11 +1,19 @@
 export function LendingOverviewSkeleton() {
   return (
     <div className="analytics-page skeleton-page" aria-busy="true">
+      <section className="prototype-note skeleton-card">
+        <span className="skeleton-line search top-market-search" />
+        <div>
+          <span className="skeleton-line button" />
+          <span className="skeleton-line button" />
+        </div>
+      </section>
       <section className="hero-grid">
         <article className="analytics-card trending-card skeleton-card">
           <SkeletonTitle />
           {Array.from({ length: 5 }, (_, index) => (
             <div className="skeleton-row compact" key={index}>
+              <span className="skeleton-line rank" />
               <span className="skeleton-dot" />
               <span className="skeleton-line wide" />
               <span className="skeleton-line value" />
@@ -13,31 +21,35 @@ export function LendingOverviewSkeleton() {
           ))}
         </article>
         <div className="center-stack">
-          <article className="payout-card skeleton-card">
+          <article className="payout-card methodology-payout-card skeleton-card">
             <span className="skeleton-line label" />
             <strong className="skeleton-line hero" />
+            <span className="skeleton-line wide" />
+            <div className="pipeline-steps skeleton-pipeline-steps">
+              <span className="skeleton-line chip" />
+              <span className="skeleton-line chip" />
+              <span className="skeleton-line chip" />
+              <span className="skeleton-line chip" />
+            </div>
           </article>
           <div className="mini-grid">
-            <MetricSkeleton />
-            <MetricSkeleton />
+            {Array.from({ length: 3 }, (_, index) => (
+              <MetricSkeleton key={index} />
+            ))}
           </div>
         </div>
-        <article className="analytics-card research-card skeleton-card">
-          <SkeletonTitle />
-          <div className="skeleton-block art" />
-          <span className="skeleton-line wide" />
-          <span className="skeleton-line short" />
-        </article>
       </section>
       <section className="market-panel skeleton-card">
-        <div className="category-tabs">
-          <span className="skeleton-line tab" />
-          <span className="skeleton-line tab" />
-          <span className="skeleton-line tab" />
-        </div>
-        <div className="filter-row">
-          <span className="skeleton-line search" />
-          <span className="skeleton-line button" />
+        <div className="filter-pill-row">
+          <div className="filter-left-group">
+            <span className="skeleton-line button" />
+            <span className="skeleton-line button" />
+            <span className="skeleton-line button" />
+            <span className="skeleton-line button" />
+          </div>
+          <div className="filter-right-group">
+            <span className="skeleton-line button" />
+          </div>
         </div>
         <MarketTableSkeleton rows={8} />
       </section>
@@ -124,6 +136,7 @@ export function PageSkeleton({ rows = 6 }: { rows?: number }) {
           <span className="skeleton-line label" />
           <span className="skeleton-line title" />
         </div>
+        <span className="skeleton-line button" />
       </header>
       <section className="panel skeleton-card">
         <MarketTableSkeleton rows={rows} />
@@ -137,7 +150,7 @@ function MetricSkeleton() {
     <article className="analytics-card metric-panel skeleton-card">
       <SkeletonTitle />
       <span className="skeleton-line metric" />
-      <div className="skeleton-block mini-chart" />
+      <span className="skeleton-line chip" />
     </article>
   );
 }
