@@ -213,7 +213,7 @@ async function blockAtOrBeforeAny(
         timestamp,
       );
     } catch (error) {
-      errors.push(`${url}: ${errorMessage(error)}`);
+      errors.push(`${redactRpcUrl(url)}: ${errorMessage(error)}`);
     }
   }
   throw new Error(
@@ -284,6 +284,15 @@ function stringifyBlockNumbers(
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function redactRpcUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname ? "/..." : ""}`;
+  } catch {
+    return "<invalid-rpc-url>";
+  }
 }
 
 function sleep(ms: number): Promise<void> {

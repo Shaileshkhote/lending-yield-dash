@@ -559,11 +559,11 @@ async function blockAtOrBeforeAny(
     for (const url of urls) {
       try {
         console.log(
-          `[backfill] resolving ${timestamp.toString()} with ${url} attempt=${attempt}/${BLOCK_RETRIES}`,
+          `[backfill] resolving ${timestamp.toString()} with ${redactRpcUrl(url)} attempt=${attempt}/${BLOCK_RETRIES}`,
         );
         return await blockAtOrBefore(createClient(url), timestamp);
       } catch (error) {
-        errors.push(`${url}: ${compactErrorMessage(error)}`);
+        errors.push(`${redactRpcUrl(url)}: ${compactErrorMessage(error)}`);
       }
     }
     if (attempt < BLOCK_RETRIES) {
@@ -579,6 +579,15 @@ function createClient(url: string): PublicClient {
   return createPublicClient({
     transport: http(url, { timeout: 20_000, retryCount: 1 }),
   });
+}
+
+function redactRpcUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname ? "/..." : ""}`;
+  } catch {
+    return "<invalid-rpc-url>";
+  }
 }
 
 async function blockNumbersForTarget(

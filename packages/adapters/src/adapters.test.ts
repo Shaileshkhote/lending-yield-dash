@@ -3,19 +3,26 @@ import type { RawMarketSnapshot } from "@lendingscope/core";
 import { CHAIN } from "./helpers/chains";
 import { buildLendingFetchOptions, chainsForLendingRun } from "./helpers/options";
 import { normalizeProtocolSnapshot } from "./helpers/protocol-snapshot";
-import { rpcCandidatesForChain } from "./helpers/rpc";
+import { redactRpcUrl, rpcCandidatesForChain } from "./helpers/rpc";
 import { ADAPTER_VERSION } from "./helpers/version";
 import { getAdapter, lendingAdapters } from "./registry";
 
 describe("lending adapters", () => {
-  it("resolves RPC candidates from env first and public fallbacks second", () => {
+  it("tries public RPCs before env failovers", () => {
     const previous = process.env.ETHEREUM_RPC_URL;
+    const previousBudget = process.env.RPC_PREMIUM_AFTER_PUBLIC_FAILURES;
     process.env.ETHEREUM_RPC_URL = "https://example-rpc.invalid";
+    process.env.RPC_PREMIUM_AFTER_PUBLIC_FAILURES = "3";
 
     try {
       const candidates = rpcCandidatesForChain(CHAIN.ETHEREUM);
 
-      expect(candidates[0]).toBe("https://example-rpc.invalid");
+      expect(candidates.slice(0, 3)).toEqual([
+        "https://mainnet.gateway.tenderly.co",
+        "https://eth.llamarpc.com",
+        "https://eth.drpc.org",
+      ]);
+      expect(candidates[3]).toBe("https://example-rpc.invalid");
       expect(candidates).toContain("https://mainnet.gateway.tenderly.co");
     } finally {
       if (previous === undefined) {
@@ -23,7 +30,20 @@ describe("lending adapters", () => {
       } else {
         process.env.ETHEREUM_RPC_URL = previous;
       }
+      if (previousBudget === undefined) {
+        delete process.env.RPC_PREMIUM_AFTER_PUBLIC_FAILURES;
+      } else {
+        process.env.RPC_PREMIUM_AFTER_PUBLIC_FAILURES = previousBudget;
+      }
     }
+  });
+
+  it("redacts RPC URLs before logging", () => {
+    expect(
+      redactRpcUrl(
+        "https://lb.drpc.live/arbitrum/secret-token-that-should-not-log",
+      ),
+    ).toBe("https://lb.drpc.live/...");
   });
 
   it("normalizes raw protocol payloads into the canonical shape", async () => {
