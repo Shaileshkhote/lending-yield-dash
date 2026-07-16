@@ -17,6 +17,7 @@ const START_DATE = "2023-10-12";
 const SOURCE_METHOD = "Kamino official REST API";
 const MARKET_CONCURRENCY = envPositiveInt("KAMINO_API_MARKET_CONCURRENCY", 2);
 const RESERVE_CONCURRENCY = envPositiveInt("KAMINO_API_RESERVE_CONCURRENCY", 2);
+const REQUEST_SLEEP_MS = envNonNegativeInt("KAMINO_API_REQUEST_SLEEP_MS", 0);
 
 const chainConfig: Record<string, LendingChainConfig> = {
   [SOLANA_CHAIN]: {
@@ -266,7 +267,11 @@ async function fetchJson<T>(path: string): Promise<T> {
       `Kamino API ${path} failed with ${response.status} ${response.statusText}`,
     );
   }
-  return response.json() as Promise<T>;
+  const payload = (await response.json()) as T;
+  if (REQUEST_SLEEP_MS > 0) {
+    await sleep(REQUEST_SLEEP_MS);
+  }
+  return payload;
 }
 
 function apiSource(args: {
@@ -346,6 +351,10 @@ function shiftUtcDate(date: string, days: number): string {
   return new Date(timestamp + days * 86_400_000).toISOString().slice(0, 10);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function slug(value: string): string {
   return value
     .toLowerCase()
@@ -356,6 +365,11 @@ function slug(value: string): string {
 function envPositiveInt(key: string, fallback: number): number {
   const parsed = Number.parseInt(process.env[key] ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function envNonNegativeInt(key: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[key] ?? "", 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
 type KaminoMarketConfig = {
