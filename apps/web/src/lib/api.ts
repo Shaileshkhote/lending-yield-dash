@@ -66,33 +66,16 @@ export type PoolChartResponse = {
   data: HistoryPoint[];
 };
 
-const CLIENT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-const jsonCache = new Map<string, { expiresAt: number; promise: Promise<unknown> }>();
-
 export async function fetchJson<T>(path: string): Promise<T> {
   const url = apiUrl(path);
-  const cached = jsonCache.get(url);
-  if (cached && cached.expiresAt > Date.now()) return cached.promise as Promise<T>;
-
-  const promise = fetch(url, { cache: "force-cache" }).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`${path} failed with ${response.status}`);
-    }
-    return response.json() as Promise<T>;
-  });
-
-  jsonCache.set(url, { expiresAt: Date.now() + CLIENT_CACHE_TTL_MS, promise });
-
-  try {
-    return await promise;
-  } catch (error) {
-    jsonCache.delete(url);
-    throw error;
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`${path} failed with ${response.status}`);
   }
+  return response.json() as Promise<T>;
 }
 
 function apiUrl(path: string): string {
-  if (path.startsWith("/")) return path;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!baseUrl || /^https?:\/\//.test(path)) return path;
   return `${baseUrl.replace(/\/$/, "")}${path}`;
