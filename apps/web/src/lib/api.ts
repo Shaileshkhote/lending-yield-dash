@@ -75,6 +75,7 @@ export async function fetchJson<T>(path: string): Promise<T> {
 }
 
 function apiUrl(path: string): string {
+  if (path.startsWith("/")) return path;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!baseUrl || /^https?:\/\//.test(path)) return path;
   return `${baseUrl.replace(/\/$/, "")}${path}`;
