@@ -17,7 +17,7 @@ type Theme = "light" | "dark";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     const activeTheme = document.documentElement.dataset.theme;

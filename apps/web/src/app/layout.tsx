@@ -10,11 +10,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(() => { try { const theme = localStorage.getItem("lendingscope-theme") || "light"; document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light"; document.documentElement.style.colorScheme = document.documentElement.dataset.theme; } catch (_) { document.documentElement.dataset.theme = "light"; document.documentElement.style.colorScheme = "light"; } })();`,
+            __html: `(() => { try { const theme = localStorage.getItem("lendingscope-theme") || "dark"; document.documentElement.dataset.theme = theme === "light" ? "light" : "dark"; document.documentElement.style.colorScheme = document.documentElement.dataset.theme; } catch (_) { document.documentElement.dataset.theme = "dark"; document.documentElement.style.colorScheme = "dark"; } })();`,
           }}
         />
       </head>
