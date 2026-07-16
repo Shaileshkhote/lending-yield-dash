@@ -615,7 +615,7 @@ function parseArgs(args: string[]): ParsedArgs {
   if (!Number.isInteger(monthsBack) || monthsBack < 1) {
     throw new Error(`Invalid --months-back value ${monthsBack}.`);
   }
-  if (!Number.isInteger(chunkDays) || chunkDays < 1 || chunkDays > 31) {
+  if (!Number.isInteger(chunkDays) || chunkDays < 1 || chunkDays > 62) {
     throw new Error(`Invalid --chunk-days value ${chunkDays}.`);
   }
   for (const date of [from, to].filter(Boolean)) {
@@ -731,12 +731,7 @@ function chunkDatesByMonth(dates: string[], chunkDays: number): string[][] {
   const chunks: string[][] = [];
   let current: string[] = [];
   for (const date of dates) {
-    const month = date.slice(0, 7);
-    const currentMonth = current[0]?.slice(0, 7);
-    if (
-      current.length &&
-      (current.length >= chunkDays || currentMonth !== month)
-    ) {
+    if (current.length >= chunkDays) {
       chunks.push(current);
       current = [];
     }
