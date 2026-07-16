@@ -53,6 +53,8 @@ export function MarketsPage() {
           <p className="eyebrow">Markets</p>
           <h1>Current lending table</h1>
         </div>
+      </header>
+      <section className="market-panel markets-page-panel">
         <div className="filters">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search markets" />
           <label className="filter-select">
@@ -95,8 +97,6 @@ export function MarketsPage() {
             </select>
           </label>
         </div>
-      </header>
-      <section className="panel">
         {data ? <MarketTable markets={filtered} /> : <MarketTableSkeleton rows={10} />}
       </section>
     </div>

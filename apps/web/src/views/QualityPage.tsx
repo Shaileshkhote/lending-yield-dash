@@ -6,8 +6,8 @@ import { PageSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatUsd, marketHealth, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
-const INITIAL_VISIBLE_ROWS = 240;
-const ROW_BATCH_SIZE = 240;
+const INITIAL_VISIBLE_ROWS = 120;
+const ROW_BATCH_SIZE = 120;
 
 export function QualityPage() {
   const [markets, setMarkets] = useState<LendingMarket[]>([]);

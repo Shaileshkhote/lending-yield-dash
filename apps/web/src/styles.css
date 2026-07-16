@@ -29,6 +29,10 @@ body {
   background: #050505;
 }
 
+nextjs-portal {
+  display: none !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -99,6 +103,33 @@ select {
 
 .nav-link.muted {
   color: #898989;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 3px;
+  width: 64px;
+  min-height: 31px;
+  margin: 24px 8px 0;
+  padding: 3px;
+  border: 1px solid #222222;
+  border-radius: 999px;
+  background: #101010;
+  color: #8d8d8d;
+}
+
+.theme-toggle span {
+  display: grid;
+  place-items: center;
+  height: 23px;
+  border-radius: 999px;
+}
+
+.theme-toggle span.active {
+  background: #ffffff;
+  color: #050505;
 }
 
 .nav-section-label {
@@ -945,26 +976,40 @@ select {
   margin-top: 16px;
 }
 
+.markets-page-panel {
+  margin-top: 0;
+}
+
+.markets-page-panel .filters {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-soft, #1f1f1f);
+  background: var(--surface, #0d0d0d);
+}
+
 .protocol-directory-panel {
   margin-top: 16px;
 }
 
 .protocol-directory-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px 48px;
+  grid-template-columns: minmax(260px, 1fr) 150px 150px 96px 32px;
   align-items: center;
-  min-height: 42px;
-  padding: 0 0 0 24px;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 20px 0 24px;
   border-bottom: 1px solid #1f1f1f;
   color: #7f7f7f;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 700;
 }
 
-.protocol-directory-head span:last-child {
-  grid-column: 2;
-  padding-right: 18px;
-  text-align: right;
+.protocol-directory-head span:nth-child(2) {
+  padding-left: 0;
+}
+
+.protocol-directory-head span:nth-child(3),
+.protocol-directory-head span:nth-child(4) {
+  text-align: left;
 }
 
 .protocol-list {
@@ -974,7 +1019,7 @@ select {
 
 .protocol-list-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr);
   border-top: 1px solid #1f1f1f;
   background: #0d0d0d;
 }
@@ -985,11 +1030,11 @@ select {
 
 .protocol-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
+  grid-template-columns: minmax(260px, 1fr) 150px 150px 96px 32px;
   align-items: center;
-  gap: 16px;
-  min-height: 68px;
-  padding: 0 0 0 24px;
+  gap: 12px;
+  min-height: 64px;
+  padding: 0 20px 0 24px;
   border: 0;
   background: transparent;
   color: #ffffff;
@@ -1000,14 +1045,35 @@ select {
 
 .protocol-row:hover,
 .protocol-row.selected {
-  background: #141414;
+  background: #0c0c0c;
 }
 
 .protocol-left {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
+}
+
+.protocol-row-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  justify-self: end;
+  color: #898989;
+}
+
+.protocol-row[aria-expanded="true"] .protocol-row-arrow svg {
+  transform: rotate(180deg);
+}
+
+.protocol-row-arrow svg {
+  transition: transform 160ms ease;
+}
+
+.protocol-row-arrow.open-link {
+  color: #777777;
 }
 
 .protocol-left strong,
@@ -1017,22 +1083,23 @@ select {
 
 .protocol-left strong {
   color: #ffffff;
-  font-size: 15px;
-  font-weight: 720;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .protocol-left em {
-  margin-top: 3px;
+  margin-top: 2px;
   color: #7d7d7d;
   font-size: 12px;
+  font-weight: 500;
   font-style: normal;
 }
 
 .protocol-symbol {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border: 1px solid #292929;
   border-radius: 999px;
   background:
@@ -1056,12 +1123,49 @@ select {
   border-radius: inherit;
 }
 
+.protocol-chain-stack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  padding-left: 0;
+}
+
+.protocol-chain-icon,
+.protocol-chain-more {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: -7px;
+  border: 1px solid #202020;
+  border-radius: 999px;
+  background: #111111;
+  color: #dcdcdc;
+  font-size: 9px;
+  font-weight: 760;
+  overflow: hidden;
+}
+
+.protocol-chain-icon:first-child {
+  margin-left: 0;
+}
+
+.protocol-chain-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.protocol-chain-more {
+  background: #181818;
+  color: #aaaaaa;
+}
+
 .protocol-right {
   display: inline-flex;
   align-items: baseline;
-  justify-content: flex-end;
-  gap: 6px;
-  padding-right: 18px;
+  justify-content: flex-start;
   color: #8a8a8a;
   font-size: 12px;
   white-space: nowrap;
@@ -1069,53 +1173,38 @@ select {
 
 .protocol-right b {
   color: #ffffff;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.protocol-expand {
-  display: inline-grid;
-  place-items: center;
-  border: 0;
-  border-left: 1px solid #1d1d1d;
-  background: transparent;
-  color: #898989;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.protocol-expand:hover {
-  background: #141414;
+.protocol-tvl {
+  justify-self: start;
   color: #ffffff;
-}
-
-.protocol-expand svg {
-  transition: transform 160ms ease;
-}
-
-.protocol-expand.open svg {
-  transform: rotate(180deg);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .protocol-variants {
   grid-column: 1 / -1;
   display: grid;
   border-top: 1px solid #1d1d1d;
-  background: #101010;
+  background: #0b0b0b;
 }
 
 .protocol-variant {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 48px;
+  grid-template-columns: minmax(260px, 1fr) 150px 150px 96px 32px;
   align-items: center;
-  min-height: 42px;
-  padding: 0 0 0 74px;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 20px 0 24px;
   border: 0;
   border-top: 1px solid #1b1b1b;
-  background: #0f0f0f;
+  background: #0b0b0b;
   color: #d8d8d8;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 620;
   text-align: left;
   text-decoration: none;
 }
@@ -1126,15 +1215,36 @@ select {
 
 .protocol-variant:hover,
 .protocol-variant.selected {
-  background: #161616;
+  background: #111111;
   color: #ffffff;
 }
 
-.protocol-variant b {
-  padding-right: 18px;
-  color: #8f8f8f;
-  font-size: 12px;
-  text-align: right;
+.protocol-variant-left {
+  position: relative;
+  padding-left: 44px;
+}
+
+.protocol-variant-left::before {
+  content: "";
+  position: absolute;
+  left: 17px;
+  width: 16px;
+  height: 1px;
+  border-radius: 999px;
+  background: #3a3a3a;
+}
+
+.protocol-variant-name strong {
+  color: #cfcfcf;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.protocol-variant .protocol-tvl,
+.protocol-variant .protocol-right b {
+  color: #d7d7d7;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .protocol-detail {
@@ -3144,27 +3254,34 @@ select {
   }
 
   .protocol-list-item {
-    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .protocol-directory-head {
-    grid-template-columns: minmax(0, 1fr) 76px 42px;
-    padding-left: 14px;
+    grid-template-columns: minmax(180px, 1fr) 72px 88px 52px 44px;
+    gap: 12px;
+    padding: 0 14px 0 16px;
   }
 
-  .protocol-directory-head span:last-child {
-    padding-right: 12px;
+  .protocol-directory-head span:nth-child(2) {
+    padding-left: 0;
+  }
+
+  .protocol-directory-head span:nth-child(3),
+  .protocol-directory-head span:nth-child(4) {
+    padding-right: 0;
   }
 
   .protocol-row {
-    grid-template-columns: minmax(0, 1fr) 76px;
-    min-height: 66px;
-    padding-left: 14px;
+    grid-template-columns: minmax(180px, 1fr) 72px 88px 52px 44px;
+    min-height: 64px;
+    gap: 12px;
+    padding: 0 14px 0 16px;
   }
 
   .protocol-symbol {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
   }
 
   .protocol-right span {
@@ -3172,16 +3289,21 @@ select {
   }
 
   .protocol-right {
-    padding-right: 12px;
+    padding-right: 0;
+  }
+
+  .protocol-tvl {
+    font-size: 12px;
   }
 
   .protocol-variant {
-    grid-template-columns: minmax(0, 1fr) 56px 42px;
-    padding-left: 64px;
+    grid-template-columns: minmax(180px, 1fr) 72px 88px 52px 36px;
+    gap: 12px;
+    padding: 0 14px 0 58px;
   }
 
   .protocol-variant b {
-    padding-right: 12px;
+    padding-right: 0;
   }
 
   .protocol-detail-heading {
@@ -3444,5 +3566,1087 @@ select {
 
   .asset-source-card .asset-fact-row {
     grid-template-columns: 1fr;
+  }
+}
+
+html[data-theme="dark"] {
+  --page-bg: #030303;
+  --sidebar-bg: #030303;
+  --content-shell: #050505;
+  --content-bg: #060606;
+  --surface: rgb(10 10 10 / 94%);
+  --surface-soft: rgb(13 13 13 / 94%);
+  --surface-muted: rgb(18 18 18 / 92%);
+  --surface-hover: rgb(24 24 24 / 92%);
+  --border: rgb(255 255 255 / 7%);
+  --border-soft: rgb(255 255 255 / 5%);
+  --text-strong: #f5f5f5;
+  --text: #dddddd;
+  --text-muted: #8c8c8c;
+  --text-faint: #626262;
+  --pill: rgb(9 9 9 / 88%);
+  --pill-active: #ffffff;
+  --pill-active-text: #080808;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 3%) inset, 0 24px 60px rgb(0 0 0 / 42%);
+  --shadow-soft: 0 12px 30px rgb(0 0 0 / 28%);
+  --shadow-popover: 0 26px 72px rgb(0 0 0 / 58%);
+  --skeleton: linear-gradient(90deg, rgb(255 255 255 / 5%) 0%, rgb(255 255 255 / 10%) 42%, rgb(255 255 255 / 5%) 82%);
+  --positive: #1ac98b;
+  --positive-bg: rgb(26 201 139 / 13%);
+  --negative: #ff4568;
+  --negative-bg: rgb(255 69 104 / 13%);
+  --warning: #e7ad3c;
+  --warning-bg: rgb(231 173 60 / 14%);
+  --accent: #111111;
+  --accent-soft: rgb(255 255 255 / 8%);
+  --focus-ring: rgb(255 255 255 / 18%);
+  --chart-grid: #181818;
+  --chart-tooltip-bg: #090909;
+  --chart-tooltip-border: #202020;
+  --chart-tooltip-text: #ffffff;
+  --chart-primary: #ffffff;
+  --chart-primary-soft: #9b9b9b;
+  --chart-brush-bg: #111111;
+  --chart-brush-stroke: #858585;
+  color: var(--text-strong);
+  background: var(--page-bg);
+}
+
+html[data-theme="light"] {
+  --page-bg: #fafafa;
+  --sidebar-bg: #fafafa;
+  --content-shell: #f7f7f6;
+  --content-bg: #f7f7f6;
+  --surface: rgb(255 255 255 / 88%);
+  --surface-soft: rgb(251 251 250 / 92%);
+  --surface-muted: #f0f0ef;
+  --surface-hover: #f6f6f4;
+  --border: #e7e7e4;
+  --border-soft: #eeeeec;
+  --text-strong: #111111;
+  --text: #262626;
+  --text-muted: #8a8a8a;
+  --text-faint: #b5b5b1;
+  --pill: rgb(255 255 255 / 82%);
+  --pill-active: #111111;
+  --pill-active-text: #ffffff;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 80%) inset, 0 18px 44px rgb(0 0 0 / 7%);
+  --shadow-soft: 0 8px 20px rgb(0 0 0 / 6%);
+  --shadow-popover: 0 22px 64px rgb(0 0 0 / 14%);
+  --skeleton: linear-gradient(90deg, #eeeeec 0%, #f8f8f7 42%, #eeeeec 82%);
+  --positive: #16bd7f;
+  --positive-bg: rgb(22 189 127 / 11%);
+  --negative: #ff3f66;
+  --negative-bg: #ffe9ee;
+  --warning: #c58a20;
+  --warning-bg: #fff3d6;
+  --accent: #111111;
+  --accent-soft: rgb(0 0 0 / 6%);
+  --focus-ring: rgb(0 0 0 / 14%);
+  --chart-grid: #e9e9e6;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #deded9;
+  --chart-tooltip-text: #111111;
+  --chart-primary: #111111;
+  --chart-primary-soft: #767676;
+  --chart-brush-bg: #eeeeec;
+  --chart-brush-stroke: #9a9a94;
+  color: var(--text-strong);
+  background: var(--page-bg);
+}
+
+html[data-theme] body,
+html[data-theme] .app-shell {
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+html[data-theme] .sidebar {
+  border-right: 0;
+  background: var(--sidebar-bg);
+}
+
+html[data-theme] .brand,
+html[data-theme] .page-header h1,
+html[data-theme] .protocol-detail-heading h2,
+html[data-theme] .asset-hero h1 {
+  color: var(--text-strong);
+}
+
+html[data-theme] .app-content {
+  min-height: 100vh;
+  padding: 20px 20px 20px 0;
+  background: var(--content-shell);
+  border-radius: 34px 0 0 34px;
+}
+
+html[data-theme] .main {
+  min-height: calc(100vh - 40px);
+  padding: 32px;
+  border-radius: 30px;
+  background: var(--content-bg);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 3%);
+}
+
+html[data-theme="light"] .main {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 70%);
+}
+
+html[data-theme] .nav-link {
+  color: var(--text-muted);
+}
+
+html[data-theme] .nav-link:hover,
+html[data-theme] .nav-link.active {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+}
+
+html[data-theme] .theme-toggle,
+html[data-theme] .search-pill,
+html[data-theme] .contact-button,
+html[data-theme] .table-search,
+html[data-theme] .filters input,
+html[data-theme] .pretty-filter-trigger,
+html[data-theme] .filter-select,
+html[data-theme] .active-filter-chip,
+html[data-theme] .protocol-back-link,
+html[data-theme] .protocol-link-row a,
+html[data-theme] .protocol-version-tabs a,
+html[data-theme] .table-load-row button,
+html[data-theme] .source-load-row button,
+html[data-theme] .pool-link,
+html[data-theme] select {
+  border-color: var(--border);
+  background: var(--pill);
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+}
+
+html[data-theme] .theme-toggle span.active,
+html[data-theme] .mode-toggle button.active {
+  background: var(--pill-active);
+  color: var(--pill-active-text);
+}
+
+html[data-theme] .analytics-card,
+html[data-theme] .market-panel,
+html[data-theme] .protocol-detail,
+html[data-theme] .asset-hero,
+html[data-theme] .live-payout-card,
+html[data-theme] .methodology-summary article,
+html[data-theme] .telegram-card,
+html[data-theme] .methodology-mini {
+  position: relative;
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(22px) saturate(1.15);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+html[data-theme] .analytics-card::before,
+html[data-theme] .market-panel::before,
+html[data-theme] .protocol-detail::before,
+html[data-theme] .asset-hero::before,
+html[data-theme] .live-payout-card::before,
+html[data-theme] .methodology-summary article::before,
+html[data-theme] .methodology-mini::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 14%), transparent 38%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 28%);
+  opacity: 0.48;
+  pointer-events: none;
+}
+
+html[data-theme="dark"] .analytics-card::before,
+html[data-theme="dark"] .market-panel::before,
+html[data-theme="dark"] .protocol-detail::before,
+html[data-theme="dark"] .asset-hero::before,
+html[data-theme="dark"] .live-payout-card::before,
+html[data-theme="dark"] .methodology-summary article::before,
+html[data-theme="dark"] .methodology-mini::before {
+  opacity: 0.18;
+}
+
+html[data-theme] .analytics-card > *,
+html[data-theme] .market-panel > *,
+html[data-theme] .protocol-detail > *,
+html[data-theme] .asset-hero > *,
+html[data-theme] .live-payout-card > *,
+html[data-theme] .methodology-summary article > *,
+html[data-theme] .methodology-mini > * {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-theme] .analytics-card:hover,
+html[data-theme] .methodology-summary article:hover,
+html[data-theme] .methodology-mini:hover {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--accent) 9%, transparent);
+  transform: translateY(-1px);
+}
+
+html[data-theme] .card-title,
+html[data-theme] .card-title em,
+html[data-theme] .ticker-item small,
+html[data-theme] .trend-copy small,
+html[data-theme] .asset-copy > span,
+html[data-theme] .protocol-left em,
+html[data-theme] .protocol-right,
+html[data-theme] .protocol-detail-heading > span,
+html[data-theme] .protocol-description,
+html[data-theme] .protocol-variant b,
+html[data-theme] .methodology-summary p,
+html[data-theme] .methodology-mini span,
+html[data-theme] .page-header p,
+html[data-theme] .eyebrow,
+html[data-theme] .rank,
+html[data-theme] .dropdown-empty,
+html[data-theme] .protocol-expand,
+html[data-theme] .protocol-row-arrow,
+html[data-theme] .protocol-variant svg,
+html[data-theme] .sort-button,
+html[data-theme] .range-values,
+html[data-theme] .match-mode-row > span {
+  color: var(--text-muted);
+}
+
+html[data-theme] .brand,
+html[data-theme] .ticker-item strong,
+html[data-theme] .trend-copy strong,
+html[data-theme] .market-link strong,
+html[data-theme] .metric-panel-head strong,
+html[data-theme] .research-card h2,
+html[data-theme] .methodology-mini strong,
+html[data-theme] .protocol-left strong,
+html[data-theme] .protocol-right b,
+html[data-theme] .protocol-tvl,
+html[data-theme] .protocol-stat strong,
+html[data-theme] .market-table td,
+html[data-theme] .range-control-head,
+html[data-theme] .range-values strong,
+html[data-theme] .asset-main h2 {
+  color: var(--text-strong);
+}
+
+html[data-theme] .title-notch,
+html[data-theme] .dots i {
+  background: var(--border);
+}
+
+html[data-theme] .dots .active {
+  background: var(--text-strong);
+}
+
+html[data-theme] .trending-list li,
+html[data-theme] .market-table th,
+html[data-theme] .market-table td,
+html[data-theme] .protocol-directory-head,
+html[data-theme] .protocol-list-item,
+html[data-theme] .protocol-variants,
+html[data-theme] .protocol-variant,
+html[data-theme] .protocol-detail-heading,
+html[data-theme] .protocol-version-tabs,
+html[data-theme] .protocol-stat-grid,
+html[data-theme] .protocol-stat,
+html[data-theme] .filter-pill-row,
+html[data-theme] .column-search,
+html[data-theme] .table-load-row,
+html[data-theme] .source-load-row,
+html[data-theme] .skeleton-row,
+html[data-theme] .skeleton-table-row {
+  border-color: var(--border-soft);
+}
+
+html[data-theme] .protocol-list,
+html[data-theme] .protocol-list-item,
+html[data-theme] .category-tabs,
+html[data-theme] .table-wrap,
+html[data-theme] .market-table,
+html[data-theme] .quality-table-wrap,
+html[data-theme] .skeleton-table {
+  background: var(--surface);
+}
+
+html[data-theme] .protocol-variants {
+  background: color-mix(in srgb, var(--surface) 70%, var(--content-bg));
+}
+
+html[data-theme] .protocol-variant {
+  background: color-mix(in srgb, var(--surface) 78%, var(--content-bg));
+}
+
+html[data-theme] .protocol-variant:hover,
+html[data-theme] .protocol-variant.selected {
+  background: var(--surface-hover);
+}
+
+html[data-theme] .protocol-variant-left::before {
+  background: var(--border);
+}
+
+html[data-theme] .protocol-variant-name strong,
+html[data-theme] .protocol-variant .protocol-tvl,
+html[data-theme] .protocol-variant .protocol-right b {
+  color: color-mix(in srgb, var(--text-strong) 82%, var(--text-muted));
+}
+
+html[data-theme] .protocol-row,
+html[data-theme] .protocol-variant,
+html[data-theme] .market-table th {
+  color: var(--text);
+}
+
+html[data-theme] .protocol-row:hover,
+html[data-theme] .protocol-row.selected,
+html[data-theme] .protocol-expand:hover,
+html[data-theme] .protocol-variant:hover,
+html[data-theme] .protocol-variant.selected,
+html[data-theme] .market-table tr:hover td,
+html[data-theme] .dropdown-option:hover,
+html[data-theme] .dropdown-option.selected,
+html[data-theme] .pretty-filter-trigger:hover,
+html[data-theme] .pretty-filter-trigger.open,
+html[data-theme] .protocol-version-tabs a:hover,
+html[data-theme] .protocol-version-tabs a.selected,
+html[data-theme] .active-filter-chip:hover,
+html[data-theme] .column-search button:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+html[data-theme] .nav-link,
+html[data-theme] .theme-toggle,
+html[data-theme] .search-pill,
+html[data-theme] .contact-button,
+html[data-theme] .pretty-filter-trigger,
+html[data-theme] .protocol-row,
+html[data-theme] .protocol-variant,
+html[data-theme] .dropdown-option,
+html[data-theme] .market-table tr,
+html[data-theme] .pool-link,
+html[data-theme] .telegram-button,
+html[data-theme] .category-more a {
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+html[data-theme] .nav-link:hover,
+html[data-theme] .pretty-filter-trigger:hover,
+html[data-theme] .contact-button:hover,
+html[data-theme] .search-pill:hover,
+html[data-theme] .pool-link:hover,
+html[data-theme] .telegram-button:hover,
+html[data-theme] .category-more a:hover {
+  transform: translateY(-1px);
+}
+
+html[data-theme] .pretty-filter-trigger.open,
+html[data-theme] .theme-toggle:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-soft);
+}
+
+html[data-theme] a:focus-visible,
+html[data-theme] button:focus-visible,
+html[data-theme] input:focus-visible,
+html[data-theme] select:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px var(--focus-ring);
+}
+
+html[data-theme] .filter-popover {
+  animation: filter-pop 160ms ease both;
+  transform-origin: top left;
+}
+
+@keyframes filter-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+html[data-theme] .market-table tr:hover td {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 7%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+html[data-theme] .category-tabs button {
+  color: var(--text-muted);
+}
+
+html[data-theme] .category-tabs button.active {
+  border-bottom-color: var(--text-strong);
+  color: var(--text-strong);
+}
+
+html[data-theme] .category-tabs button:disabled {
+  color: var(--text-faint);
+}
+
+html[data-theme] .category-more {
+  background: linear-gradient(90deg, rgb(0 0 0 / 0%), var(--surface-soft) 70%);
+}
+
+html[data-theme] .category-more a {
+  border-color: var(--border);
+  background: var(--pill);
+  color: var(--text-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+html[data-theme] .filter-popover {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 22px 54px rgb(0 0 0 / 18%);
+}
+
+html[data-theme] .dropdown-option {
+  color: var(--text);
+}
+
+html[data-theme] .mode-toggle {
+  background: var(--surface-muted);
+}
+
+html[data-theme] .mode-toggle button {
+  color: var(--text-muted);
+}
+
+html[data-theme] .table-search input,
+html[data-theme] .filters input,
+html[data-theme] .column-search input {
+  color: var(--text-strong);
+}
+
+html[data-theme] .table-search input::placeholder,
+html[data-theme] .filters input::placeholder,
+html[data-theme] .column-search input::placeholder {
+  color: var(--text-faint);
+}
+
+html[data-theme] .market-table th {
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+html[data-theme] .table-wrap {
+  scrollbar-color: var(--text-faint) var(--surface-muted);
+}
+
+html[data-theme] .table-wrap::-webkit-scrollbar-track {
+  background: var(--surface-muted);
+}
+
+html[data-theme] .table-wrap::-webkit-scrollbar-thumb {
+  border-color: var(--surface-muted);
+  background: var(--text-faint);
+}
+
+html[data-theme] .payout-card {
+  border-color: var(--border);
+  background:
+    radial-gradient(circle at 74% 45%, color-mix(in srgb, var(--positive) 34%, transparent) 0 4px, transparent 5px),
+    radial-gradient(circle, color-mix(in srgb, var(--text-strong) 8%, transparent) 1px, transparent 1.2px) 0 0 / 6px 6px,
+    var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme] .payout-card span {
+  color: var(--text-muted);
+}
+
+html[data-theme] .payout-card strong {
+  color: var(--text-strong);
+  text-shadow: none;
+}
+
+html[data-theme] .methodology-payout-card {
+  background:
+    radial-gradient(circle at 18% 28%, color-mix(in srgb, var(--positive) 16%, transparent), transparent 22%),
+    radial-gradient(circle at 74% 18%, color-mix(in srgb, var(--chart-primary-soft) 16%, transparent), transparent 30%),
+    linear-gradient(135deg, var(--surface) 0%, var(--surface-soft) 50%, var(--content-bg) 100%);
+}
+
+html[data-theme] .methodology-payout-card::before {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--text-strong) 5%, transparent), transparent 42%),
+    radial-gradient(circle at 90% 88%, color-mix(in srgb, var(--negative) 11%, transparent), transparent 34%);
+}
+
+html[data-theme] .methodology-payout-card::after {
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--content-bg) 74%, transparent));
+}
+
+html[data-theme] .methodology-payout-card small,
+html[data-theme] .pipeline-steps b {
+  color: var(--text-muted);
+}
+
+html[data-theme] .pipeline-steps i::before,
+html[data-theme] .up,
+html[data-theme] .ticker-item em {
+  color: var(--positive);
+}
+
+html[data-theme] .down,
+html[data-theme] .ticker-item em.down {
+  color: var(--negative);
+}
+
+html[data-theme] .metric-panel-head em,
+html[data-theme] .q-inactive,
+html[data-theme] .q-incomplete,
+html[data-theme] .q-unreliable {
+  background: var(--negative-bg);
+  color: var(--negative);
+}
+
+html[data-theme] .q-healthy,
+html[data-theme] .pass {
+  background: var(--positive-bg);
+  color: var(--positive);
+}
+
+html[data-theme] .q-watch,
+html[data-theme] .warn,
+html[data-theme] .q-degraded,
+html[data-theme] .q-paused,
+html[data-theme] .q-collateral {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+html[data-theme] .adapter-rank-icon,
+html[data-theme] .protocol-symbol,
+html[data-theme] .protocol-chain-icon,
+html[data-theme] .protocol-chain-more,
+html[data-theme] .chain-filter-icon,
+html[data-theme] .protocol-filter-icon,
+html[data-theme] .asset-type-filter-icon {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-strong) 5%, transparent);
+}
+
+html[data-theme] .adapter-rank-icon.has-image,
+html[data-theme] .protocol-symbol.has-image,
+html[data-theme] .chain-filter-icon.has-image,
+html[data-theme] .protocol-filter-icon.has-image,
+html[data-theme] .asset-type-filter-icon.has-image {
+  background: var(--surface);
+}
+
+html[data-theme] .token-logo.has-image {
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--text-strong) 8%, transparent),
+    0 1px 2px rgb(0 0 0 / 10%);
+}
+
+html[data-theme] .token-network {
+  border-color: var(--content-bg);
+  background: var(--surface);
+  color: var(--text-strong);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 16%);
+}
+
+html[data-theme] .telegram-card {
+  background:
+    radial-gradient(circle at 54% 12%, color-mix(in srgb, var(--text-strong) 12%, transparent), transparent 30%),
+    var(--surface);
+}
+
+html[data-theme] .github-card-logo,
+html[data-theme] .telegram-card p {
+  color: var(--text-strong);
+}
+
+html[data-theme] .telegram-close {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+}
+
+html[data-theme] .telegram-button {
+  background: var(--pill-active);
+  color: var(--pill-active-text);
+}
+
+html[data-theme] .skeleton-line,
+html[data-theme] .skeleton-dot,
+html[data-theme] .skeleton-avatar,
+html[data-theme] .skeleton-block {
+  background: var(--skeleton);
+  background-size: 220% 100%;
+}
+
+html[data-theme] .chart-loading {
+  background: var(--surface);
+}
+
+html[data-theme] .range-inputs {
+  background:
+    linear-gradient(
+      90deg,
+      var(--border) 0%,
+      var(--border) var(--range-low),
+      var(--text-strong) var(--range-low),
+      var(--text-strong) var(--range-high),
+      var(--border) var(--range-high),
+      var(--border) 100%
+    );
+  background-clip: content-box;
+}
+
+html[data-theme] .range-inputs input::-webkit-slider-thumb {
+  border-color: var(--content-bg);
+  background: var(--text-strong);
+}
+
+html[data-theme] .range-inputs input::-moz-range-thumb {
+  border-color: var(--content-bg);
+  background: var(--text-strong);
+}
+
+html[data-theme] .main {
+  min-height: auto;
+}
+
+html[data-theme] .page,
+html[data-theme] .panel,
+html[data-theme] .market-panel,
+html[data-theme] .protocol-detail {
+  min-width: 0;
+}
+
+html[data-theme] .prototype-note {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  box-shadow: var(--shadow-soft);
+}
+
+html[data-theme] .prototype-note a {
+  border-color: var(--border);
+  background: var(--pill);
+  color: var(--text);
+  box-shadow: none;
+}
+
+html[data-theme] .prototype-note a:hover {
+  background: var(--surface-hover);
+  color: var(--text-strong);
+}
+
+html[data-theme] .analytics-card,
+html[data-theme] .market-panel,
+html[data-theme] .protocol-detail,
+html[data-theme] .panel,
+html[data-theme] .metric-card,
+html[data-theme] .asset-chart-card,
+html[data-theme] .asset-info-card,
+html[data-theme] .asset-stat-card,
+html[data-theme] .source-card,
+html[data-theme] .source-load-row,
+html[data-theme] .asset-about-card {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme] .asset-about-card {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme] .methodology-payout-card {
+  min-height: 154px;
+  background:
+    radial-gradient(circle at 82% 20%, color-mix(in srgb, var(--text-strong) 7%, transparent), transparent 32%),
+    linear-gradient(135deg, var(--surface) 0%, var(--surface-soft) 58%, var(--content-bg) 100%);
+}
+
+html[data-theme] .methodology-payout-card::before {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--text-strong) 4%, transparent), transparent 48%);
+}
+
+html[data-theme] .methodology-payout-card::after {
+  opacity: 0.48;
+}
+
+html[data-theme] .asset-stat-card {
+  min-height: 104px;
+}
+
+html[data-theme] .asset-stat-card > div,
+html[data-theme] .asset-stat-card p,
+html[data-theme] .asset-stat-card em,
+html[data-theme] .asset-identity p,
+html[data-theme] .asset-breadcrumb,
+html[data-theme] .asset-about-card p,
+html[data-theme] .asset-fact-label,
+html[data-theme] .source-card p,
+html[data-theme] .quality-market small {
+  color: var(--text-muted);
+}
+
+html[data-theme] .asset-stat-card strong,
+html[data-theme] .asset-fact-value,
+html[data-theme] .asset-breadcrumb strong,
+html[data-theme] .chain-stack,
+html[data-theme] .chain-badge,
+html[data-theme] .source-card h2,
+html[data-theme] .methodology-summary h2,
+html[data-theme] .quality-market strong {
+  color: var(--text-strong);
+}
+
+html[data-theme] .asset-stat-card b {
+  background: var(--negative-bg);
+  color: var(--negative);
+}
+
+html[data-theme] .asset-stat-card b.up {
+  background: var(--positive-bg);
+  color: var(--positive);
+}
+
+html[data-theme] .asset-chart-card {
+  min-height: 508px;
+}
+
+html[data-theme] .asset-chart-tabs,
+html[data-theme] .asset-breadcrumb,
+html[data-theme] .asset-hero,
+html[data-theme] .asset-fact-row,
+html[data-theme] .asset-info-card dt,
+html[data-theme] .asset-info-card dd,
+html[data-theme] .source-card,
+html[data-theme] .source-card dl,
+html[data-theme] .methodology-summary article {
+  border-color: var(--border-soft);
+}
+
+html[data-theme] .asset-chart-tabs button {
+  color: var(--text-muted);
+}
+
+html[data-theme] .asset-chart-tabs .active {
+  border-bottom-color: var(--text-strong);
+  color: var(--text-strong);
+}
+
+html[data-theme] .range-select select,
+html[data-theme] .asset-chart-tabs span {
+  border-color: var(--border);
+  background: var(--pill);
+  color: var(--text);
+}
+
+html[data-theme] .range-select::after,
+html[data-theme] .share-chart {
+  color: var(--text-strong);
+}
+
+html[data-theme] .asset-chart {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 64%, transparent), transparent 42%),
+    var(--surface);
+}
+
+html[data-theme] .asset-chart strong {
+  color: color-mix(in srgb, var(--text-strong) 6%, transparent);
+}
+
+html[data-theme] .asset-chart .recharts-brush-slide {
+  fill: color-mix(in srgb, var(--text-strong) 10%, transparent);
+  stroke: color-mix(in srgb, var(--text-strong) 22%, transparent);
+}
+
+html[data-theme] .asset-chart .recharts-brush-traveller rect {
+  fill: var(--text-strong);
+  stroke: var(--text-strong);
+}
+
+html[data-theme] .asset-chart .recharts-brush-texts text {
+  fill: var(--text-muted);
+}
+
+html[data-theme] .live-payout-card {
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--text-strong) 7%, transparent) 1px, transparent 1.2px) 0 0 / 6px 6px,
+    var(--surface);
+}
+
+html[data-theme] .live-payout-card strong {
+  color: var(--text-strong);
+}
+
+html[data-theme] .source-list {
+  gap: 10px;
+  padding: 10px;
+  max-height: min(660px, calc(100vh - 300px));
+  align-content: start;
+  grid-auto-rows: minmax(96px, auto);
+  overflow: auto;
+  scrollbar-color: var(--text-faint) var(--surface-muted);
+  scrollbar-width: thin;
+}
+
+html[data-theme] .source-card {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.4fr);
+  align-items: start;
+  min-height: 96px;
+  overflow: visible;
+}
+
+html[data-theme] .source-card > div {
+  min-width: 0;
+}
+
+html[data-theme] .source-card h2 {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme] .source-card dl {
+  grid-template-columns: 112px minmax(0, 1fr);
+}
+
+html[data-theme] .source-card dt {
+  color: var(--text-muted);
+}
+
+html[data-theme] .source-card dd {
+  color: var(--text-strong);
+}
+
+html[data-theme] .quality-table-wrap {
+  width: auto;
+  min-width: 0;
+  max-height: min(620px, calc(100vh - 240px));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme] .panel > .quality-table-wrap {
+  margin: 12px;
+}
+
+html[data-theme] .market-table {
+  border-color: var(--border-soft);
+}
+
+html[data-theme] .market-table th {
+  height: 42px;
+  background: color-mix(in srgb, var(--surface-soft) 92%, var(--content-bg));
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+html[data-theme] .market-table td {
+  color: var(--text);
+}
+
+html[data-theme] .sort-mark.active {
+  color: var(--text-strong);
+}
+
+html[data-theme] .table-load-row,
+html[data-theme] .source-load-row {
+  color: var(--text-muted);
+}
+
+html[data-theme] .protocol-stat {
+  background: var(--surface-soft);
+}
+
+html[data-theme] .protocol-stat span {
+  color: var(--text-muted);
+}
+
+html[data-theme] .telegram-card {
+  min-height: 176px;
+  padding: 76px 16px 14px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--text-strong) 8%, transparent), transparent 28%),
+    var(--surface);
+}
+
+html[data-theme] .github-card-logo {
+  top: 22px;
+  width: 46px;
+  height: 46px;
+  opacity: 0.72;
+  filter: none;
+}
+
+html[data-theme] .telegram-card p {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+html[data-theme] .telegram-close {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .protocol-directory-panel {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .protocol-list-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .protocol-directory-head {
+    grid-template-columns: minmax(0, 1fr) 82px 72px 24px;
+    gap: 8px;
+    padding: 0 10px 0 12px;
+  }
+
+  .protocol-directory-head span:nth-child(4) {
+    display: none;
+  }
+
+  .protocol-row {
+    grid-template-columns: minmax(0, 1fr) 82px 72px 24px;
+    gap: 8px;
+    padding: 0 10px 0 12px;
+  }
+
+  .protocol-left {
+    gap: 8px;
+  }
+
+  .protocol-left > span:last-child,
+  .protocol-left strong,
+  .protocol-left em,
+  .protocol-variant > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .protocol-symbol {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+  }
+
+  .protocol-chain-stack {
+    justify-content: flex-start;
+  }
+
+  .protocol-chain-icon,
+  .protocol-chain-more {
+    width: 22px;
+    height: 22px;
+    margin-left: -7px;
+  }
+
+  .protocol-right {
+    display: none;
+  }
+
+  .protocol-tvl {
+    font-size: 12px;
+  }
+
+  .protocol-variant {
+    grid-template-columns: minmax(0, 1fr) 82px 72px 24px;
+    gap: 8px;
+    padding: 0 10px 0 12px;
+  }
+
+  .protocol-variant-left {
+    padding-left: 36px;
+  }
+
+  .protocol-variant-left::before {
+    left: 14px;
+    width: 14px;
+  }
+
+  .protocol-variant b {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  html[data-theme] .app-content {
+    margin-left: 0;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  html[data-theme] .main {
+    border-radius: 0;
+  }
+
+  html[data-theme] .sidebar {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  html[data-theme] .app-shell,
+  html[data-theme] .sidebar,
+  html[data-theme] .app-content,
+  html[data-theme] .main {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  html[data-theme] .sidebar {
+    padding: 14px 12px 10px;
+  }
+
+  html[data-theme] .side-nav {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  html[data-theme] .main {
+    padding: 24px 16px 28px;
+  }
+
+  html[data-theme] .page {
+    width: 100%;
   }
 }

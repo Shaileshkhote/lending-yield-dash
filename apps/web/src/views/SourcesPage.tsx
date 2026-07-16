@@ -5,8 +5,8 @@ import { Github } from "lucide-react";
 import { PageSkeleton } from "../components/Skeletons";
 import { fetchJson, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
-const INITIAL_VISIBLE_SOURCES = 120;
-const SOURCE_BATCH_SIZE = 120;
+const INITIAL_VISIBLE_SOURCES = 36;
+const SOURCE_BATCH_SIZE = 72;
 
 export function SourcesPage() {
   const [markets, setMarkets] = useState<LendingMarket[]>([]);

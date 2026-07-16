@@ -359,14 +359,14 @@ const MemoizedMarketChart = memo(function MarketChart({
         <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
         <XAxis
           dataKey="date"
-          tick={{ fill: "#777", fontSize: 12 }}
+          tick={{ fill: "var(--text-muted)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
           minTickGap={chartRange === "1y" || chartRange === "all" ? 28 : 18}
           interval="preserveStartEnd"
           tickFormatter={(value) => formatChartAxisDate(String(value), chartRange)}
         />
-        <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
+        <YAxis tick={{ fill: "var(--text-muted)", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
         <Tooltip
           contentStyle={chartTooltipStyle}
           formatter={(value) => [activeChart.format(Number(value)), activeChart.label]}
