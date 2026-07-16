@@ -205,6 +205,7 @@ export class MaterializerService {
 
   private async buildFiles(version: string): Promise<CacheFile[]> {
     const current = await this.currentMarkets();
+    const currentLite = await this.currentLiteMarkets();
     const quality = await this.qualitySummary();
     const anomalies = quality.checks.filter((check) => check.status !== "pass");
     const generatedAt = new Date().toISOString();
@@ -215,6 +216,7 @@ export class MaterializerService {
 
     const files: CacheFile[] = [
       jsonFile("lending/current.json", current),
+      jsonFile("lending/current-lite.json", currentLite),
       jsonFile("lending/quality.json", quality),
       jsonFile("lending/anomalies.json", { generatedAt, status: "success", data: anomalies })
     ];
@@ -557,10 +559,30 @@ export class MaterializerService {
 
   async materializeCurrentLite(): Promise<{ generatedAt: string; files: number; markets: number }> {
     const generatedAt = new Date().toISOString();
+    const version = generatedAt.slice(0, 13).replace(/[-T:]/g, "");
+    const runId = `mat_current_lite_${generatedAt}_${randomUUID().slice(0, 8)}`;
     const current = await this.currentLiteMarkets();
     current.generatedAt = generatedAt;
-    await this.writeLocalJson("lending/current-lite.json", current);
-    return { generatedAt, files: 1, markets: current.data.length };
+
+    await this.prisma.materializationRun.create({
+      data: { id: runId, status: "running", version }
+    });
+
+    try {
+      await this.materializeFile(jsonFile("lending/current-lite.json", current), runId);
+      await this.prisma.materializationRun.update({
+        where: { id: runId },
+        data: { status: "success", finishedAt: new Date() }
+      });
+      return { generatedAt, files: 1, markets: current.data.length };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.prisma.materializationRun.update({
+        where: { id: runId },
+        data: { status: "failed", finishedAt: new Date(), error: message }
+      });
+      throw error;
+    }
   }
 
   async marketHistory(marketId: string, range: RangeSelection) {
@@ -764,9 +786,6 @@ export class MaterializerService {
     await rename(tmp, path);
   }
 
-  private async writeLocalJson(key: string, value: unknown) {
-    await this.writeLocal(key, `${JSON.stringify(value, null, 2)}\n`);
-  }
 }
 
 function jsonFile(key: string, value: unknown): CacheFile {

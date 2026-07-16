@@ -40,6 +40,25 @@ export class R2StorageService {
     return this.publicBaseUrl;
   }
 
+  getPublicUrl(key: string): string | undefined {
+    return this.publicBaseUrl ? `${this.publicBaseUrl.replace(/\/$/, "")}/${key}` : undefined;
+  }
+
+  async downloadJson(key: string): Promise<string | null> {
+    const url = this.getPublicUrl(key);
+    if (!url) return null;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      this.logger.debug(`R2 public read failed for ${key}: ${response.status}`);
+      return null;
+    }
+
+    const body = await response.text();
+    JSON.parse(body);
+    return body;
+  }
+
   async uploadJson(key: string, body: string): Promise<UploadResult | null> {
     if (!this.client || !this.bucket) {
       this.logger.debug(`R2 not configured; skipped upload for ${key}`);
@@ -59,7 +78,7 @@ export class R2StorageService {
     return {
       key,
       etag: response.ETag,
-      publicUrl: this.publicBaseUrl ? `${this.publicBaseUrl.replace(/\/$/, "")}/${key}` : undefined
+      publicUrl: this.getPublicUrl(key)
     };
   }
 

@@ -1,8 +1,9 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { PrismaService } from "../db/prisma.service";
 import { MaterializerService } from "../materializer/materializer.service";
+import { R2StorageService } from "../materializer/r2-storage.service";
 
 const MIN_CURRENT_SUPPLIED_USD = 10_000;
 
@@ -16,7 +17,9 @@ export class LendingService {
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
     @Inject(MaterializerService)
-    private readonly materializer: MaterializerService
+    private readonly materializer: MaterializerService,
+    @Inject(R2StorageService)
+    private readonly r2: R2StorageService
   ) {}
 
   async cachedJson<T>(key: string, fallback?: () => Promise<T>, ttlMs = this.hotCacheTtlMs): Promise<T> {
@@ -26,11 +29,16 @@ export class LendingService {
     }
 
     try {
-      const content = await readFile(join(this.cacheBase, key), "utf8");
-      const value = JSON.parse(content) as T;
+      const value = await this.readLocalJson<T>(key);
       this.setMemoryCache(key, value, ttlMs);
       return value;
     } catch {
+      const r2Value = await this.readR2JsonAndCache<T>(key);
+      if (r2Value !== null) {
+        this.setMemoryCache(key, r2Value, ttlMs);
+        return r2Value;
+      }
+
       if (fallback) {
         const value = await fallback();
         this.setMemoryCache(key, value, ttlMs);
@@ -187,6 +195,28 @@ export class LendingService {
       expiresAt: Date.now() + ttlMs,
       value
     });
+  }
+
+  private async readLocalJson<T>(key: string): Promise<T> {
+    const content = await readFile(join(this.cacheBase, key), "utf8");
+    return JSON.parse(content) as T;
+  }
+
+  private async readR2JsonAndCache<T>(key: string): Promise<T | null> {
+    const body = await this.r2.downloadJson(key);
+    if (body === null) return null;
+
+    const value = JSON.parse(body) as T;
+    await this.writeLocal(key, body.endsWith("\n") ? body : `${body}\n`);
+    return value;
+  }
+
+  private async writeLocal(key: string, body: string) {
+    const path = join(this.cacheBase, key);
+    const tmp = `${path}.tmp`;
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(tmp, body);
+    await rename(tmp, path);
   }
 }
 
