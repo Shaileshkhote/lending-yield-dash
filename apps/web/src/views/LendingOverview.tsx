@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Check, ChevronDown, Columns3, Github, Search, X } from "lucide-react";
 import { defaultMarketColumns, hideableMarketColumns, MarketTable, type MarketColumnKey } from "../components/MarketTable";
@@ -47,6 +47,7 @@ export function LendingOverview() {
   const [rangeFilters, setRangeFilters] = useState<RangeState>({});
   const [visibleColumns, setVisibleColumns] = useState<MarketColumnKey[]>(defaultMarketColumns);
   const [columnSearch, setColumnSearch] = useState("");
+  const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
     fetchJson<CurrentMarketsResponse>("/api/lending/markets/current").then(setData).catch((err) => setError(err.message));
@@ -103,7 +104,7 @@ export function LendingOverview() {
   }, [columnSearch]);
   const hiddenColumnCount = hideableMarketColumns.filter((column) => !visibleColumnSet.has(column.key)).length;
   const filteredRows = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = deferredQuery.trim().toLowerCase();
     const visibleRows = rows.filter((row) => {
       const matchesQuery = normalized
         ? [row.assetSymbol, row.protocol, row.chain, row.marketId].some((value) => value.toLowerCase().includes(normalized))
@@ -118,7 +119,7 @@ export function LendingOverview() {
       return matchesQuery && matchesChain && matchesProtocol && matchesAssetType && matchesRanges;
     });
     return [...visibleRows].sort((a, b) => (b.totalSuppliedUsd ?? 0) - (a.totalSuppliedUsd ?? 0));
-  }, [chainMode, currentRanges, protocolMode, query, rangeFilters, rows, selectedAssetTypes, selectedChains, selectedProtocols]);
+  }, [chainMode, currentRanges, deferredQuery, protocolMode, rangeFilters, rows, selectedAssetTypes, selectedChains, selectedProtocols]);
 
   const activeFilterCount = selectedChains.length + selectedProtocols.length + selectedAssetTypes.length + rangeFilterCount;
   const hasFilters = activeFilterCount > 0 || query.trim().length > 0;
@@ -395,7 +396,6 @@ export function LendingOverview() {
           </div>
         ) : null}
         <MarketTable markets={filteredRows} visibleColumns={visibleColumns} />
-        <div className="loaded-note">All {filteredRows.length} items loaded successfully</div>
       </section>
 
     </div>

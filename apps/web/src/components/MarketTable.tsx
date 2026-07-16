@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { formatPct, formatSignedPct, formatUsd, marketHealth, type LendingMarket } from "../lib/api";
@@ -27,6 +27,8 @@ export const marketColumns: Array<{ key: MarketColumnKey; label: string; canHide
 ];
 
 const defaultColumns = marketColumns.map((column) => column.key);
+const INITIAL_VISIBLE_ROWS = 240;
+const ROW_BATCH_SIZE = 240;
 
 const columnCells: Record<MarketColumnKey, (market: LendingMarket) => ReactNode> = {
   asset: (market) => (
@@ -54,9 +56,10 @@ export const defaultMarketColumns = defaultColumns;
 
 export const requiredMarketColumns = marketColumns.filter((column) => !column.canHide).map((column) => column.key);
 
-export function MarketTable({ markets, visibleColumns = defaultColumns }: Props) {
+function MarketTableComponent({ markets, visibleColumns = defaultColumns }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("supplied");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ROWS);
   const visibleColumnSet = useMemo(() => new Set([...requiredMarketColumns, ...visibleColumns]), [visibleColumns]);
   const columns = useMemo(
     () => marketColumns.filter((column) => visibleColumnSet.has(column.key)),
@@ -80,6 +83,12 @@ export function MarketTable({ markets, visibleColumns = defaultColumns }: Props)
       }),
     [markets, sortDirection, sortKey]
   );
+  const visibleMarkets = useMemo(() => sortedMarkets.slice(0, visibleCount), [sortedMarkets, visibleCount]);
+  const hasMoreRows = visibleMarkets.length < sortedMarkets.length;
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_ROWS);
+  }, [markets, sortDirection, sortKey, visibleColumns]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -106,7 +115,7 @@ export function MarketTable({ markets, visibleColumns = defaultColumns }: Props)
           </tr>
         </thead>
         <tbody>
-          {sortedMarkets.map((market) => (
+          {visibleMarkets.map((market) => (
             <tr key={market.marketId}>
               {columns.map((column) => (
                 <td key={column.key}>{columnCells[column.key](market)}</td>
@@ -115,9 +124,21 @@ export function MarketTable({ markets, visibleColumns = defaultColumns }: Props)
           ))}
         </tbody>
       </table>
+      {hasMoreRows ? (
+        <div className="table-load-row">
+          <span>
+            {visibleMarkets.length} / {sortedMarkets.length}
+          </span>
+          <button type="button" onClick={() => setVisibleCount((count) => Math.min(count + ROW_BATCH_SIZE, sortedMarkets.length))}>
+            Show more
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
+
+export const MarketTable = memo(MarketTableComponent);
 
 function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
   const Icon = !active ? ArrowUpDown : direction === "asc" ? ArrowUp : ArrowDown;

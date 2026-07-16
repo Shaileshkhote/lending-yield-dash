@@ -6,9 +6,13 @@ import { PageSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatUsd, marketHealth, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
+const INITIAL_VISIBLE_ROWS = 240;
+const ROW_BATCH_SIZE = 240;
+
 export function QualityPage() {
   const [markets, setMarkets] = useState<LendingMarket[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ROWS);
 
   useEffect(() => {
     fetchJson<CurrentMarketsResponse>("/api/lending/markets/current")
@@ -40,7 +44,7 @@ export function QualityPage() {
               </tr>
             </thead>
             <tbody>
-              {markets.map((market) => {
+              {markets.slice(0, visibleCount).map((market) => {
                 const health = marketHealth(market);
                 return (
                   <tr key={market.marketId}>
@@ -65,6 +69,16 @@ export function QualityPage() {
               })}
             </tbody>
           </table>
+          {visibleCount < markets.length ? (
+            <div className="table-load-row">
+              <span>
+                {visibleCount} / {markets.length}
+              </span>
+              <button type="button" onClick={() => setVisibleCount((count) => Math.min(count + ROW_BATCH_SIZE, markets.length))}>
+                Show more
+              </button>
+            </div>
+          ) : null}
         </div>
       </section>
     </div>

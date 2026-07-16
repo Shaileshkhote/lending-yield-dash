@@ -5,9 +5,13 @@ import { Github } from "lucide-react";
 import { PageSkeleton } from "../components/Skeletons";
 import { fetchJson, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
+const INITIAL_VISIBLE_SOURCES = 120;
+const SOURCE_BATCH_SIZE = 120;
+
 export function SourcesPage() {
   const [markets, setMarkets] = useState<LendingMarket[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_SOURCES);
 
   useEffect(() => {
     fetchJson<CurrentMarketsResponse>("/api/lending/markets/current")
@@ -45,7 +49,7 @@ export function SourcesPage() {
         </article>
       </section>
       <section className="panel source-list">
-        {markets.map((market) => (
+        {markets.slice(0, visibleCount).map((market) => (
           <article key={market.marketId} className="source-card">
             <div>
               <h2>{market.marketId}</h2>
@@ -63,6 +67,16 @@ export function SourcesPage() {
             </dl>
           </article>
         ))}
+        {visibleCount < markets.length ? (
+          <div className="source-load-row">
+            <span>
+              {visibleCount} / {markets.length}
+            </span>
+            <button type="button" onClick={() => setVisibleCount((count) => Math.min(count + SOURCE_BATCH_SIZE, markets.length))}>
+              Show more
+            </button>
+          </div>
+        ) : null}
       </section>
     </div>
   );

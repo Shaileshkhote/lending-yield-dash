@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { MarketTable } from "../components/MarketTable";
 import { MarketTableSkeleton } from "../components/Skeletons";
 import { fetchJson, type CurrentMarketsResponse } from "../lib/api";
@@ -13,6 +13,7 @@ export function MarketsPage() {
   const [protocol, setProtocol] = useState("all");
   const [query, setQuery] = useState("");
   const [assetType, setAssetType] = useState("all");
+  const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -25,12 +26,12 @@ export function MarketsPage() {
   }, []);
 
   const rows = data?.data ?? [];
-  const assets = [...new Set(rows.map((row) => row.assetSymbol))];
-  const chains = [...new Set(rows.map((row) => row.chain))];
-  const protocols = [...new Set(rows.map((row) => row.protocol))];
+  const assets = useMemo(() => [...new Set(rows.map((row) => row.assetSymbol))].sort(), [rows]);
+  const chains = useMemo(() => [...new Set(rows.map((row) => row.chain))].sort(), [rows]);
+  const protocols = useMemo(() => [...new Set(rows.map((row) => row.protocol))].sort(), [rows]);
   const filtered = useMemo(
     () => {
-      const normalized = query.trim().toLowerCase();
+      const normalized = deferredQuery.trim().toLowerCase();
       return rows.filter((row) => {
         const matchesQuery = normalized
           ? [row.assetSymbol, row.protocol, row.chain, row.marketId].some((value) => value.toLowerCase().includes(normalized))
@@ -42,7 +43,7 @@ export function MarketsPage() {
         return matchesQuery && matchesAsset && matchesChain && matchesProtocol && matchesAssetType;
       });
     },
-    [asset, assetType, chain, protocol, query, rows]
+    [asset, assetType, chain, deferredQuery, protocol, rows]
   );
 
   return (

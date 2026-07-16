@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { chainLogoUrls, chainMeta } from "../lib/chains";
 import { normalizeTokenSymbol, tokenLogoUrls } from "../lib/token-icons";
 
@@ -12,7 +12,7 @@ type TokenLogoProps = {
   showNetwork?: boolean;
 };
 
-export function TokenLogo({ symbol, chain, address, size = "market", showNetwork = true }: TokenLogoProps) {
+function TokenLogoComponent({ symbol, chain, address, size = "market", showNetwork = true }: TokenLogoProps) {
   const [sourceIndex, setSourceIndex] = useState(0);
   const [networkSourceIndex, setNetworkSourceIndex] = useState(0);
   const slug = normalizeTokenSymbol(symbol);
@@ -68,3 +68,5 @@ export function TokenLogo({ symbol, chain, address, size = "market", showNetwork
     </span>
   );
 }
+
+export const TokenLogo = memo(TokenLogoComponent);

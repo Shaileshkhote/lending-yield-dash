@@ -1654,13 +1654,35 @@ select {
   border-color: #565656;
 }
 
-.loaded-note {
-  min-height: 54px;
-  padding-top: 18px;
+.table-load-row,
+.source-load-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 52px;
   border-top: 1px solid #1f1f1f;
   color: #747474;
-  text-align: center;
   font-size: 13px;
+}
+
+.table-load-row button,
+.source-load-row button {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #303030;
+  border-radius: 999px;
+  background: #121212;
+  color: #f3f3f3;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.table-load-row button:hover,
+.source-load-row button:hover {
+  border-color: #555555;
+  background: #171717;
 }
 
 .sw-footer {
@@ -2365,6 +2387,12 @@ dd {
   display: grid;
   gap: 12px;
   padding: 12px;
+}
+
+.source-load-row {
+  border: 1px solid #1f1f1f;
+  border-radius: 14px;
+  background: #0d0d0d;
 }
 
 .source-card {
