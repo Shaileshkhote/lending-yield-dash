@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { BarChart3, ExternalLink, Info, Percent, Share2, WalletCards } from "lucide-react";
 import type { ReactNode } from "react";
@@ -26,6 +26,23 @@ const chartRanges: Array<{ value: ChartRange; label: string }> = [
   { value: "90d", label: "90d" },
   { value: "1y", label: "1y" }
 ];
+
+const DESKTOP_CHART_POINTS = 420;
+const COMPACT_CHART_POINTS = 220;
+const chartTooltipStyle = {
+  background: "var(--chart-tooltip-bg)",
+  border: "1px solid var(--chart-tooltip-border)",
+  borderRadius: 12,
+  color: "var(--chart-tooltip-text)"
+};
+
+type ChartDatum = HistoryPoint & {
+  date: string;
+  chartApy?: number | null;
+  chartBorrowApy?: number | null;
+  chartSuppliedUsd?: number | null;
+  chartBorrowedUsd?: number | null;
+};
 
 export function MarketDetailPage() {
   const params = useParams<{ marketId?: string | string[] }>();
@@ -62,7 +79,7 @@ export function MarketDetailPage() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const chartData = useMemo(
+  const chartData = useMemo<ChartDatum[]>(
     () =>
       history.map((point) => ({
         ...point,
@@ -76,6 +93,10 @@ export function MarketDetailPage() {
         totalSuppliedUsd: point.tvlUsd ?? point.totalSuppliedUsd
       })),
     [history, market]
+  );
+  const chartRenderData = useMemo(
+    () => downsampleChartData(chartData, isCompactChart ? COMPACT_CHART_POINTS : DESKTOP_CHART_POINTS),
+    [chartData, isCompactChart]
   );
 
   const apyChange = useMemo(() => {
@@ -157,51 +178,14 @@ export function MarketDetailPage() {
               </select>
             </label>
           </div>
-          <div className="asset-chart">
-            <ResponsiveContainer width="100%" height={chartHeight}>
-              <ComposedChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
-                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: "#777", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  minTickGap={chartRange === "1y" || chartRange === "all" ? 28 : 18}
-                  interval="preserveStartEnd"
-                  tickFormatter={(value) => formatChartAxisDate(String(value), chartRange)}
-                />
-                <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
-                <Tooltip
-                  contentStyle={{ background: "var(--chart-tooltip-bg)", border: "1px solid var(--chart-tooltip-border)", borderRadius: 12, color: "var(--chart-tooltip-text)" }}
-                  formatter={(value) => [activeChart.format(Number(value)), activeChart.label]}
-                  labelFormatter={(label) => formatChartTooltipDate(String(label))}
-                />
-                {activeChart.kind === "bar" ? (
-                  <Bar dataKey={activeChart.dataKey} fill="var(--chart-primary)" radius={[5, 5, 0, 0]} maxBarSize={28} />
-                ) : (
-                  <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary)" strokeWidth={2.6} dot={false} connectNulls />
-                )}
-                <Brush
-                  dataKey="date"
-                  height={44}
-                  y={brushY}
-                  stroke="var(--chart-brush-stroke)"
-                  fill="var(--chart-brush-bg)"
-                  travellerWidth={8}
-                  alwaysShowText={false}
-                >
-                  {activeChart.kind === "bar" ? (
-                    <BarChart data={chartData}>
-                      <Bar dataKey={activeChart.dataKey} fill="var(--chart-primary-soft)" maxBarSize={8} />
-                    </BarChart>
-                  ) : (
-                    <LineChart data={chartData}>
-                      <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary-soft)" strokeWidth={1.4} dot={false} connectNulls />
-                    </LineChart>
-                  )}
-                </Brush>
-              </ComposedChart>
-            </ResponsiveContainer>
+          <div className={activeChart.kind === "line" ? "asset-chart draw-chart" : "asset-chart"}>
+            <MemoizedMarketChart
+              activeChart={activeChart}
+              brushY={brushY}
+              chartData={chartRenderData}
+              chartHeight={chartHeight}
+              chartRange={chartRange}
+            />
             {historyLoading && !chartData.length ? <div className="chart-loading"><div className="skeleton-block chart" /></div> : null}
             <strong>LendingScope</strong>
           </div>
@@ -321,6 +305,76 @@ function AssetStat({ icon, label, hint, value, change }: { icon: ReactNode; labe
       {change ? <b className={change.startsWith("+") ? "up" : "down"}>{change}</b> : null}
     </article>
   );
+}
+
+type ChartConfig = ReturnType<typeof getChartConfig>;
+
+const MemoizedMarketChart = memo(function MarketChart({
+  activeChart,
+  brushY,
+  chartData,
+  chartHeight,
+  chartRange,
+}: {
+  activeChart: ChartConfig;
+  brushY: number;
+  chartData: ChartDatum[];
+  chartHeight: number;
+  chartRange: ChartRange;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={chartHeight}>
+      <ComposedChart data={chartData} margin={{ top: 28, right: 28, left: 8, bottom: 92 }}>
+        <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+        <XAxis
+          dataKey="date"
+          tick={{ fill: "#777", fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+          minTickGap={chartRange === "1y" || chartRange === "all" ? 28 : 18}
+          interval="preserveStartEnd"
+          tickFormatter={(value) => formatChartAxisDate(String(value), chartRange)}
+        />
+        <YAxis tick={{ fill: "#777", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={activeChart.format} />
+        <Tooltip
+          contentStyle={chartTooltipStyle}
+          formatter={(value) => [activeChart.format(Number(value)), activeChart.label]}
+          labelFormatter={(label) => formatChartTooltipDate(String(label))}
+        />
+        {activeChart.kind === "bar" ? (
+          <Bar dataKey={activeChart.dataKey} fill="var(--chart-primary)" radius={[5, 5, 0, 0]} maxBarSize={28} isAnimationActive={false} />
+        ) : (
+          <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary)" strokeWidth={2.6} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+        )}
+        <Brush dataKey="date" height={44} y={brushY} stroke="var(--chart-brush-stroke)" fill="var(--chart-brush-bg)" travellerWidth={8} alwaysShowText={false}>
+          {activeChart.kind === "bar" ? (
+            <BarChart data={chartData}>
+              <Bar dataKey={activeChart.dataKey} fill="var(--chart-primary-soft)" maxBarSize={8} isAnimationActive={false} />
+            </BarChart>
+          ) : (
+            <LineChart data={chartData}>
+              <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary-soft)" strokeWidth={1.4} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+            </LineChart>
+          )}
+        </Brush>
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+});
+
+function downsampleChartData<T>(data: T[], maxPoints: number): T[] {
+  if (data.length <= maxPoints) return data;
+  const step = (data.length - 1) / (maxPoints - 1);
+  const sampled: T[] = [];
+  let previousIndex = -1;
+
+  for (let index = 0; index < maxPoints; index += 1) {
+    const sourceIndex = index === maxPoints - 1 ? data.length - 1 : Math.floor(index * step);
+    if (sourceIndex !== previousIndex) sampled.push(data[sourceIndex]);
+    previousIndex = sourceIndex;
+  }
+
+  return sampled;
 }
 
 function formatSignedPct(value: number | null | undefined): string | null {
