@@ -15,6 +15,8 @@ const KAMINO_API_BASE =
 const SOLANA_CHAIN = "solana";
 const START_DATE = "2023-10-12";
 const SOURCE_METHOD = "Kamino official REST API";
+const MARKET_CONCURRENCY = envPositiveInt("KAMINO_API_MARKET_CONCURRENCY", 2);
+const RESERVE_CONCURRENCY = envPositiveInt("KAMINO_API_RESERVE_CONCURRENCY", 2);
 
 const chainConfig: Record<string, LendingChainConfig> = {
   [SOLANA_CHAIN]: {
@@ -48,8 +50,10 @@ const kaminoAdapter: LendingAdapter = {
     }
 
     const marketConfigs = await loadMarketConfigs();
-    const rows = await mapWithConcurrency(marketConfigs, 4, async (config) =>
-      loadRowsForMarket(config, options),
+    const rows = await mapWithConcurrency(
+      marketConfigs,
+      MARKET_CONCURRENCY,
+      async (config) => loadRowsForMarket(config, options),
     );
     return rows.flat();
   },
@@ -60,7 +64,10 @@ async function loadRowsForMarket(
   options: LendingFetchOptions,
 ): Promise<LendingAdapterRow[]> {
   const metrics = await loadReserveMetrics(config.lendingMarket);
-  const rows: Array<LendingAdapterRow | undefined> = await mapWithConcurrency(metrics, 4, async (metric) => {
+  const rows: Array<LendingAdapterRow | undefined> = await mapWithConcurrency(
+    metrics,
+    RESERVE_CONCURRENCY,
+    async (metric) => {
     if (
       options.assets?.length &&
       !options.assets.includes(metric.liquidityToken.toLowerCase())
@@ -95,7 +102,8 @@ async function loadRowsForMarket(
         date: options.runMode === "daily" ? options.dateString : undefined,
       }),
     } satisfies LendingAdapterRow;
-  });
+    },
+  );
 
   return rows.filter((row): row is LendingAdapterRow => Boolean(row));
 }
@@ -343,6 +351,11 @@ function slug(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function envPositiveInt(key: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[key] ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 type KaminoMarketConfig = {
