@@ -1546,7 +1546,7 @@ select {
 .market-table th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 6;
   height: 40px;
   background: #111111;
   color: #f0f0f0;
@@ -2786,6 +2786,23 @@ select {
   .market-table td {
     height: 56px;
     padding: 0 14px;
+  }
+
+  .market-table th {
+    z-index: 10;
+  }
+
+  .market-table .market-link {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .market-table .token-network-market {
+    top: -1px;
+    right: -1px;
+    width: 14px;
+    height: 14px;
+    border-width: 1.5px;
   }
 
   .asset-detail-page {
