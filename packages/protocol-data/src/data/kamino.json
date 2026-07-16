@@ -1,0 +1,17 @@
+{
+  "id": "kamino",
+  "slugs": ["kamino"],
+  "aliases": ["Kamino Finance"],
+  "name": "Kamino",
+  "symbol": "KMNO",
+  "description": "Solana DeFi protocol for lending, borrowing, vault strategies, and liquidity automation.",
+  "logo": "https://icons.llamao.fi/icons/protocols/kamino?w=96&h=96",
+  "website": "https://kamino.finance",
+  "app": "https://app.kamino.finance",
+  "docs": "https://kamino.com/docs",
+  "poolLinks": {
+    "app": "https://app.kamino.finance/lending",
+    "fallbackApp": "https://app.kamino.finance/lending"
+  },
+  "x": "https://x.com/KaminoFinance"
+}

@@ -7,6 +7,7 @@ const ADAPTER_ALIASES: Record<string, string> = {
   spark: "spark",
   compound: "compound-v3",
   "compound-v3": "compound-v3",
+  kamino: "kamino",
   morpho: "morpho-blue",
   "morpho-blue": "morpho-blue"
 };

@@ -81,5 +81,12 @@
     "label": "Stable",
     "short": "STBL",
     "logo": "https://icons.llamao.fi/icons/chains/rsz_stable?w=48&h=48"
+  },
+  {
+    "id": "solana",
+    "label": "Solana",
+    "short": "SOL",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_solana?w=48&h=48",
+    "trustWalletSlug": "solana"
   }
 ]

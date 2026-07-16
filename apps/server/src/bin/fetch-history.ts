@@ -232,6 +232,7 @@ async function blockNumbersForTarget(
   }
   const timestamp = dateToUnix(target);
   for (const [chain, urls] of entries) {
+    if (!urls.length) continue;
     blockNumbers[chain] = await blockAtOrBeforeAny(urls, timestamp);
   }
   return blockNumbers;

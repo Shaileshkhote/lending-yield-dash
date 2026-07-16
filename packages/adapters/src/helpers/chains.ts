@@ -3,7 +3,8 @@ export const CHAIN = {
   ARBITRUM: "arbitrum",
   BASE: "base",
   BSC: "bsc",
-  POLYGON: "polygon"
+  POLYGON: "polygon",
+  SOLANA: "solana"
 } as const;
 
 export type Chain = (typeof CHAIN)[keyof typeof CHAIN];
@@ -13,7 +14,8 @@ export const SUPPORTED_CHAINS: readonly Chain[] = [
   CHAIN.ARBITRUM,
   CHAIN.BASE,
   CHAIN.BSC,
-  CHAIN.POLYGON
+  CHAIN.POLYGON,
+  CHAIN.SOLANA
 ];
 
 export const PUBLIC_RPC_URLS: Record<Chain, readonly string[]> = {
@@ -55,7 +57,8 @@ export const PUBLIC_RPC_URLS: Record<Chain, readonly string[]> = {
     "https://polygon-bor-rpc.publicnode.com",
     "https://polygon-rpc.com",
     "https://polygon.drpc.org"
-  ]
+  ],
+  [CHAIN.SOLANA]: []
 };
 
 export function isSupportedChain(chain: string): chain is Chain {

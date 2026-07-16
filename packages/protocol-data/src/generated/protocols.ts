@@ -2,8 +2,9 @@
 import protocol0 from "../data/aave.json";
 import protocol1 from "../data/compound-v3.json";
 import protocol2 from "../data/fluid.json";
-import protocol3 from "../data/morpho-blue.json";
-import protocol4 from "../data/spark.json";
+import protocol3 from "../data/kamino.json";
+import protocol4 from "../data/morpho-blue.json";
+import protocol5 from "../data/spark.json";
 
 export const protocolDataFiles = [
   protocol0,
@@ -11,4 +12,5 @@ export const protocolDataFiles = [
   protocol2,
   protocol3,
   protocol4,
+  protocol5,
 ];

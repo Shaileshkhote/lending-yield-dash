@@ -61,6 +61,7 @@ describe("lending adapters", () => {
       "aave-v4",
       "compound-v3",
       "fluid",
+      "kamino",
       "morpho-blue",
       "spark",
     ]);
@@ -87,6 +88,11 @@ describe("lending adapters", () => {
     expect(getAdapter("fluid").version).toBe(
       ADAPTER_VERSION.CONTRACT_RPC_SNAPSHOT,
     );
+    expect(getAdapter("kamino").protocol).toBe("Kamino");
+    expect(getAdapter("kamino").version).toBe(
+      ADAPTER_VERSION.OFFICIAL_API_SNAPSHOT,
+    );
+    expect(getAdapter("kamino").adapter.solana.start).toBe("2023-10-12");
     expect(getAdapter("morpho-blue").protocol).toBe("Morpho Blue");
     expect(getAdapter("morpho-blue").version).toBe(
       ADAPTER_VERSION.OFFICIAL_GRAPHQL_SNAPSHOT,
@@ -127,6 +133,9 @@ describe("lending adapters", () => {
     expect(
       getAdapter("fluid").dataAvailability.history?.startDateByChain.polygon,
     ).toBe("2024-01-01");
+    expect(
+      getAdapter("kamino").dataAvailability.history?.startDateByChain.solana,
+    ).toBe("2023-10-12");
     expect(
       getAdapter("morpho-blue").dataAvailability.history?.startDateByChain
         .ethereum,
