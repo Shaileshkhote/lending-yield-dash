@@ -189,10 +189,10 @@ export function LendingOverview() {
       </section>
       <section className="hero-grid">
         <article className="analytics-card trending-card">
-          <div className="card-title">
+          <div className="card-title coverage-title">
             <span className="title-notch" />
-            <span>Adapter Coverage</span>
-            <em>{stats.protocolCount} protocols</em>
+            <span>Protocol Coverage</span>
+            <em>{stats.protocolCount}</em>
           </div>
           <ol className="trending-list">
             {adapterCoverage.map((item, index) => (

@@ -638,10 +638,44 @@ select {
   padding: 0 17px 8px;
 }
 
+.trending-card .coverage-title {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+}
+
+.coverage-title span:nth-child(2) {
+  min-width: 0;
+}
+
+.coverage-title em {
+  margin-left: auto;
+  color: #9a9a9a;
+  font-size: 15px;
+  font-weight: 650;
+  text-align: right;
+}
+
 .trending-list {
+  max-height: 344px;
   margin: 0;
   padding: 0;
   list-style: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2b2b2b transparent;
+}
+
+.trending-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.trending-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.trending-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #2b2b2b;
 }
 
 .trending-list li {
@@ -984,6 +1018,56 @@ select {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border-soft, #1f1f1f);
   background: var(--surface, #0d0d0d);
+}
+
+.markets-filter-row {
+  align-items: flex-start;
+}
+
+.markets-search {
+  flex: 1 1 360px;
+  width: auto;
+  min-width: 260px;
+}
+
+.markets-search button {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #8c8c8c;
+  cursor: pointer;
+}
+
+.markets-search button:hover {
+  background: rgb(255 255 255 / 8%);
+  color: #ffffff;
+}
+
+.markets-filter-controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.markets-filter-controls .pretty-filter-trigger b {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-filter-spacer {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
 }
 
 .protocol-directory-panel {
@@ -1531,7 +1615,7 @@ select {
 
 .filter-pill-row {
   position: relative;
-  z-index: 30;
+  z-index: 120;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -1560,7 +1644,7 @@ select {
 
 .pretty-filter {
   position: relative;
-  z-index: 31;
+  z-index: 121;
 }
 
 .pretty-filter.align-end {
@@ -1617,7 +1701,7 @@ select {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  z-index: 40;
+  z-index: 140;
   width: 220px;
   max-height: min(420px, calc(100vh - 220px));
   padding: 0;
@@ -3262,17 +3346,34 @@ select {
   }
 
   .sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
     padding: 14px 12px 10px;
   }
 
   .brand {
-    margin: 0 8px 14px;
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0 8px;
     font-size: 23px;
   }
 
+  .theme-toggle {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0 8px 0 0;
+  }
+
   .side-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
     gap: 8px;
     padding-bottom: 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
 
@@ -3372,6 +3473,22 @@ select {
 
   .filter-popover.wide {
     width: auto;
+  }
+
+  .markets-filter-row {
+    flex-wrap: wrap;
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .markets-search {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .markets-filter-controls {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .active-filter-row {
@@ -3729,10 +3846,10 @@ html[data-theme="dark"] {
   --chart-tooltip-bg: #090909;
   --chart-tooltip-border: #202020;
   --chart-tooltip-text: #ffffff;
-  --chart-primary: #ffffff;
-  --chart-primary-soft: #9b9b9b;
-  --chart-brush-bg: #111111;
-  --chart-brush-stroke: #858585;
+  --chart-primary: #564cff;
+  --chart-primary-soft: #6f68ff;
+  --chart-brush-bg: #25294d;
+  --chart-brush-stroke: #9aa0ff;
   color: var(--text-strong);
   background: var(--page-bg);
 }
@@ -3772,10 +3889,10 @@ html[data-theme="light"] {
   --chart-tooltip-bg: #ffffff;
   --chart-tooltip-border: #deded9;
   --chart-tooltip-text: #111111;
-  --chart-primary: #111111;
-  --chart-primary-soft: #767676;
-  --chart-brush-bg: #eeeeec;
-  --chart-brush-stroke: #9a9a94;
+  --chart-primary: #564cff;
+  --chart-primary-soft: #6f68ff;
+  --chart-brush-bg: #ecebff;
+  --chart-brush-stroke: #6f68ff;
   color: var(--text-strong);
   background: var(--page-bg);
 }
@@ -4090,12 +4207,23 @@ html[data-theme] .theme-toggle:hover {
   box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-soft);
 }
 
+html[data-theme] .table-search:focus-within,
+html[data-theme] .column-search:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  box-shadow: 0 0 0 4px var(--focus-ring), var(--shadow-soft);
+}
+
 html[data-theme] a:focus-visible,
 html[data-theme] button:focus-visible,
 html[data-theme] input:focus-visible,
 html[data-theme] select:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 4px var(--focus-ring);
+}
+
+html[data-theme] .table-search input:focus-visible,
+html[data-theme] .column-search input:focus-visible {
+  box-shadow: none;
 }
 
 html[data-theme] .filter-popover {
@@ -4147,6 +4275,20 @@ html[data-theme] .filter-popover {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 22px 54px rgb(0 0 0 / 18%);
+}
+
+html[data-theme] .filter-pill-row {
+  isolation: isolate;
+  z-index: 120;
+}
+
+html[data-theme] .market-panel .table-wrap {
+  position: relative;
+  z-index: 0;
+}
+
+html[data-theme] .market-panel .market-table th {
+  z-index: 0;
 }
 
 html[data-theme] .dropdown-option {
@@ -4242,12 +4384,16 @@ html[data-theme] .ticker-item em.down {
   color: var(--negative);
 }
 
-html[data-theme] .metric-panel-head em,
 html[data-theme] .q-inactive,
 html[data-theme] .q-incomplete,
 html[data-theme] .q-unreliable {
   background: var(--negative-bg);
   color: var(--negative);
+}
+
+html[data-theme] .metric-panel-head em {
+  background: var(--surface-muted);
+  color: var(--text-muted);
 }
 
 html[data-theme] .q-healthy,
@@ -4510,13 +4656,13 @@ html[data-theme] .asset-chart strong {
 }
 
 html[data-theme] .asset-chart .recharts-brush-slide {
-  fill: color-mix(in srgb, var(--text-strong) 10%, transparent);
-  stroke: color-mix(in srgb, var(--text-strong) 22%, transparent);
+  fill: color-mix(in srgb, var(--chart-primary-soft) 22%, transparent);
+  stroke: color-mix(in srgb, var(--chart-primary-soft) 46%, transparent);
 }
 
 html[data-theme] .asset-chart .recharts-brush-traveller rect {
-  fill: var(--text-strong);
-  stroke: var(--text-strong);
+  fill: var(--chart-primary);
+  stroke: var(--chart-primary);
 }
 
 html[data-theme] .asset-chart .recharts-brush-texts text {
@@ -4754,7 +4900,6 @@ html[data-theme] .telegram-close {
 
 @media (max-width: 700px) {
   html[data-theme] .app-shell,
-  html[data-theme] .sidebar,
   html[data-theme] .app-content,
   html[data-theme] .main {
     width: 100%;
@@ -4763,7 +4908,10 @@ html[data-theme] .telegram-close {
   }
 
   html[data-theme] .sidebar {
+    width: 100%;
+    max-width: 100vw;
     padding: 14px 12px 10px;
+    overflow-x: visible;
   }
 
   html[data-theme] .side-nav {

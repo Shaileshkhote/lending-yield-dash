@@ -218,7 +218,7 @@ export function MarketDetailPage() {
               chartRange={chartRange}
             />
             {historyLoading && !chartData.length ? <div className="chart-loading"><div className="skeleton-block chart" /></div> : null}
-            <strong>LendingScope</strong>
+            <strong>LendStack</strong>
           </div>
           <button className="share-chart" type="button" onClick={handleShare}>
             <Share2 size={15} />

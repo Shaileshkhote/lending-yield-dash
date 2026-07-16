@@ -4,7 +4,7 @@ import { AppShell } from "../components/AppShell";
 import "../styles.css";
 
 export const metadata: Metadata = {
-  title: "LendingScope",
+  title: "LendStack",
   description: "Independent lending analytics prototype with adapter provenance and quality checks"
 };
 

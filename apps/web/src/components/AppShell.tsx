@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <Link className="brand" href="/lending">
-          LendingScope
+          LendStack
         </Link>
         <nav className="side-nav">
           {nav.map((item) => {
