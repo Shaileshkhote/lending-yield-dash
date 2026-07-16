@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { MarketTable } from "../components/MarketTable";
-import { MarketTableSkeleton } from "../components/Skeletons";
+import { ProtocolDetailSkeleton } from "../components/Skeletons";
 import { fetchJson, formatPct, formatUsd, type CurrentMarketsResponse } from "../lib/api";
 import { buildProtocolGroups, protocolPath, protocolStats, resolveProtocolSelection } from "../lib/protocols";
 
@@ -29,21 +29,7 @@ export function ProtocolDetailPage() {
     ? { ...selection.group.metadata, ...selection.variant?.metadata }
     : undefined;
 
-  if (!data) {
-    return (
-      <div className="page">
-        <header className="page-header">
-          <div>
-            <p className="eyebrow">Protocols</p>
-            <h1>Loading protocol</h1>
-          </div>
-        </header>
-        <section className="protocol-detail">
-          <MarketTableSkeleton rows={8} />
-        </section>
-      </div>
-    );
-  }
+  if (!data) return <ProtocolDetailSkeleton />;
 
   if (!selection || !stats) {
     return (

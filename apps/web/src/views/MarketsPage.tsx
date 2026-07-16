@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { MarketTable } from "../components/MarketTable";
-import { MarketTableSkeleton } from "../components/Skeletons";
+import { MarketsPageSkeleton } from "../components/Skeletons";
 import { fetchJson, type CurrentMarketsResponse } from "../lib/api";
 import { assetTypeForMarket, assetTypeOptions } from "../lib/asset-types";
 
@@ -45,6 +45,8 @@ export function MarketsPage() {
     },
     [asset, assetType, chain, deferredQuery, protocol, rows]
   );
+
+  if (!data) return <MarketsPageSkeleton />;
 
   return (
     <div className="page">
@@ -97,7 +99,7 @@ export function MarketsPage() {
             </select>
           </label>
         </div>
-        {data ? <MarketTable markets={filtered} /> : <MarketTableSkeleton rows={10} />}
+        <MarketTable markets={filtered} />
       </section>
     </div>
   );

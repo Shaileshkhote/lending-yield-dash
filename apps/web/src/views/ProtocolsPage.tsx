@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { MarketTableSkeleton } from "../components/Skeletons";
+import { ProtocolsPageSkeleton } from "../components/Skeletons";
 import { fetchJson, formatUsd, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 import { chainLogoUrls, chainMeta } from "../lib/chains";
 import { buildProtocolGroups, protocolPath } from "../lib/protocols";
@@ -17,6 +17,8 @@ export function ProtocolsPage() {
   }, []);
 
   const groups = useMemo(() => buildProtocolGroups(data?.data ?? []), [data]);
+
+  if (!data) return <ProtocolsPageSkeleton />;
 
   const toggleExpanded = (id: string) => {
     setExpanded((current) => {
@@ -37,85 +39,79 @@ export function ProtocolsPage() {
       </header>
 
       <section className="market-panel protocol-directory-panel">
-        {data ? (
-          <>
-            <div className="protocol-directory-head">
-              <span>Protocols</span>
-              <span>Chains</span>
-              <span>TVL</span>
-              <span>Markets</span>
-              <span aria-hidden="true" />
-            </div>
-            <div className="protocol-list">
-              {groups.map((group) => {
-                const isExpanded = expanded.has(group.id);
-                const hasVariants = group.variants.length > 1;
-                const rowContent = (
-                  <>
-                    <span className="protocol-left">
-                      <span className={group.metadata?.logo ? "protocol-symbol has-image" : "protocol-symbol"}>
-                        {group.metadata?.logo ? <img src={group.metadata.logo} alt={`${group.label} logo`} /> : group.symbol}
-                      </span>
-                      <span>
-                        <strong>{group.label}</strong>
-                        <em>{hasVariants ? `${group.variants.length} versions` : "Protocol"}</em>
-                      </span>
-                    </span>
-                    <ChainIconStack chains={[...new Set(group.markets.map((market) => market.chain))].sort()} />
-                    <span className="protocol-tvl">{formatUsd(totalProtocolTvl(group.markets))}</span>
-                    <span className="protocol-right">
-                      <b>{group.markets.length}</b>
-                    </span>
-                    <span className={hasVariants ? "protocol-row-arrow" : "protocol-row-arrow open-link"} aria-hidden="true">
-                      {hasVariants ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    </span>
-                  </>
-                );
-                return (
-                  <div key={group.id} className="protocol-list-item">
-                    {hasVariants ? (
-                      <button
-                        className="protocol-row"
-                        type="button"
-                        aria-expanded={isExpanded}
-                        onClick={() => toggleExpanded(group.id)}
-                      >
-                        {rowContent}
-                      </button>
-                    ) : (
-                      <Link className="protocol-row" href={protocolPath(group.id)}>
-                        {rowContent}
+        <div className="protocol-directory-head">
+          <span>Protocols</span>
+          <span>Chains</span>
+          <span>TVL</span>
+          <span>Markets</span>
+          <span aria-hidden="true" />
+        </div>
+        <div className="protocol-list">
+          {groups.map((group) => {
+            const isExpanded = expanded.has(group.id);
+            const hasVariants = group.variants.length > 1;
+            const rowContent = (
+              <>
+                <span className="protocol-left">
+                  <span className={group.metadata?.logo ? "protocol-symbol has-image" : "protocol-symbol"}>
+                    {group.metadata?.logo ? <img src={group.metadata.logo} alt={`${group.label} logo`} /> : group.symbol}
+                  </span>
+                  <span>
+                    <strong>{group.label}</strong>
+                    <em>{hasVariants ? `${group.variants.length} versions` : "Protocol"}</em>
+                  </span>
+                </span>
+                <ChainIconStack chains={[...new Set(group.markets.map((market) => market.chain))].sort()} />
+                <span className="protocol-tvl">{formatUsd(totalProtocolTvl(group.markets))}</span>
+                <span className="protocol-right">
+                  <b>{group.markets.length}</b>
+                </span>
+                <span className={hasVariants ? "protocol-row-arrow" : "protocol-row-arrow open-link"} aria-hidden="true">
+                  {hasVariants ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </span>
+              </>
+            );
+            return (
+              <div key={group.id} className="protocol-list-item">
+                {hasVariants ? (
+                  <button
+                    className="protocol-row"
+                    type="button"
+                    aria-expanded={isExpanded}
+                    onClick={() => toggleExpanded(group.id)}
+                  >
+                    {rowContent}
+                  </button>
+                ) : (
+                  <Link className="protocol-row" href={protocolPath(group.id)}>
+                    {rowContent}
+                  </Link>
+                )}
+                {isExpanded && hasVariants ? (
+                  <div className="protocol-variants">
+                    {group.variants.map((variant) => (
+                      <Link key={variant.id} className="protocol-variant" href={protocolPath(variant.id)}>
+                        <span className="protocol-left protocol-variant-left">
+                          <span className="protocol-variant-name">
+                            <strong>{variant.label}</strong>
+                          </span>
+                        </span>
+                        <ChainIconStack chains={[...new Set(variant.markets.map((market) => market.chain))].sort()} />
+                        <span className="protocol-tvl">{formatUsd(totalProtocolTvl(variant.markets))}</span>
+                        <span className="protocol-right">
+                          <b>{variant.markets.length}</b>
+                        </span>
+                        <span className="protocol-row-arrow open-link" aria-hidden="true">
+                          <ChevronRight size={16} />
+                        </span>
                       </Link>
-                    )}
-                    {isExpanded && hasVariants ? (
-                      <div className="protocol-variants">
-                        {group.variants.map((variant) => (
-                          <Link key={variant.id} className="protocol-variant" href={protocolPath(variant.id)}>
-                            <span className="protocol-left protocol-variant-left">
-                              <span className="protocol-variant-name">
-                                <strong>{variant.label}</strong>
-                              </span>
-                            </span>
-                            <ChainIconStack chains={[...new Set(variant.markets.map((market) => market.chain))].sort()} />
-                            <span className="protocol-tvl">{formatUsd(totalProtocolTvl(variant.markets))}</span>
-                            <span className="protocol-right">
-                              <b>{variant.markets.length}</b>
-                            </span>
-                            <span className="protocol-row-arrow open-link" aria-hidden="true">
-                              <ChevronRight size={16} />
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    ) : null}
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <MarketTableSkeleton rows={8} />
-        )}
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </section>
     </div>
   );

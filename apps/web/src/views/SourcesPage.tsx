@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Github } from "lucide-react";
-import { PageSkeleton } from "../components/Skeletons";
+import { SourcesPageSkeleton } from "../components/Skeletons";
 import { fetchJson, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
 const INITIAL_VISIBLE_SOURCES = 36;
@@ -19,7 +19,7 @@ export function SourcesPage() {
       .finally(() => setLoaded(true));
   }, []);
 
-  if (!loaded) return <PageSkeleton rows={6} />;
+  if (!loaded) return <SourcesPageSkeleton />;
 
   return (
     <div className="page">

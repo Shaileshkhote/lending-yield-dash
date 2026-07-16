@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChainBadge } from "../components/ChainBadge";
-import { PageSkeleton } from "../components/Skeletons";
+import { QualityPageSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
 import { fetchJson, formatUsd, marketHealth, type CurrentMarketsResponse, type LendingMarket } from "../lib/api";
 
@@ -20,7 +20,7 @@ export function QualityPage() {
       .finally(() => setLoaded(true));
   }, []);
 
-  if (!loaded) return <PageSkeleton rows={7} />;
+  if (!loaded) return <QualityPageSkeleton />;
 
   return (
     <div className="page">
