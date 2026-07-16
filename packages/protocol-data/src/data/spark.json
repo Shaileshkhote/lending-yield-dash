@@ -1,0 +1,20 @@
+{
+  "id": "spark",
+  "slugs": ["spark"],
+  "aliases": ["Spark"],
+  "name": "Spark",
+  "symbol": "SPK",
+  "description": "Sky ecosystem lending and savings protocol for stablecoin liquidity, borrowing, and yield markets.",
+  "logo": "https://icons.llamao.fi/icons/protocols/spark?w=96&h=96",
+  "website": "https://spark.fi",
+  "app": "https://app.spark.fi",
+  "docs": "https://docs.spark.fi",
+  "poolLinks": {
+    "app": "https://app.spark.fi/markets/{chainId}/{assetAddress}",
+    "fallbackApp": "https://app.spark.fi/markets",
+    "chainIds": {
+      "ethereum": 1
+    }
+  },
+  "x": "https://x.com/sparkdotfi"
+}

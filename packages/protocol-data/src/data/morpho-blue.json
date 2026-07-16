@@ -1,0 +1,17 @@
+{
+  "id": "morpho-blue",
+  "slugs": ["morpho-blue"],
+  "aliases": ["Morpho Blue"],
+  "name": "Morpho Blue",
+  "symbol": "MORPHO",
+  "description": "Immutable lending protocol for isolated, oracle-defined lending markets and vault strategies.",
+  "logo": "https://icons.llamao.fi/icons/protocols/morpho-blue?w=96&h=96",
+  "website": "https://morpho.org",
+  "app": "https://app.morpho.org",
+  "docs": "https://docs.morpho.org",
+  "poolLinks": {
+    "app": "https://app.morpho.org/market?id={marketIdHex64}&network={chain}",
+    "fallbackApp": "https://app.morpho.org/markets"
+  },
+  "x": "https://x.com/MorphoLabs"
+}

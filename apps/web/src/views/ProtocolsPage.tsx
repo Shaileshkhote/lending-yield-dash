@@ -50,7 +50,9 @@ export function ProtocolsPage() {
                   <div key={group.id} className="protocol-list-item">
                     <Link className="protocol-row" href={protocolPath(group.id)}>
                       <span className="protocol-left">
-                        <span className="protocol-symbol">{group.symbol}</span>
+                        <span className={group.metadata?.logo ? "protocol-symbol has-image" : "protocol-symbol"}>
+                          {group.metadata?.logo ? <img src={group.metadata.logo} alt={`${group.label} logo`} /> : group.symbol}
+                        </span>
                         <span>
                           <strong>{group.label}</strong>
                           <em>{hasVariants ? `${group.variants.length} versions` : "Protocol"}</em>

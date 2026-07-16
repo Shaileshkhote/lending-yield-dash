@@ -1,3 +1,5 @@
+import { getProtocolLinksForSlug, type ProtocolPoolLinks } from "@lendingscope/protocol-data";
+
 export type LendingMarket = {
   marketId: string;
   protocol: string;
@@ -141,45 +143,38 @@ export function marketHealth(market: LendingMarket): MarketHealth {
 
 export function poolLinks(market: LendingMarket): { app: string; docs: string } {
   const chain = market.chain.toLowerCase();
-  const address = market.assetAddress;
-  if (market.protocolSlug === "aave-v3") {
-    return {
-      app: `https://app.aave.com/reserve-overview/?underlyingAsset=${address}&marketName=${aaveMarketName(chain)}`,
-      docs: "https://aave.com/docs/developers/aave-v3/markets",
-    };
-  }
-  if (market.protocolSlug === "morpho-blue") {
-    const morphoMarketId = market.marketId.match(/0x[a-f0-9]{64}$/i)?.[0];
-    return {
-      app: morphoMarketId ? `https://app.morpho.org/market?id=${morphoMarketId}&network=${chain}` : "https://app.morpho.org/markets",
-      docs: "https://docs.morpho.org/",
-    };
-  }
-  if (market.protocolSlug === "compound-v3") {
-    return {
-      app: `https://app.compound.finance/markets/${chain}/${address}`,
-      docs: "https://docs.compound.finance/",
-    };
-  }
-  if (market.protocolSlug === "spark") {
-    const chainId = sparkChainId(chain);
-    return {
-      app: chainId ? `https://app.spark.fi/markets/${chainId}/${address}` : "https://app.spark.fi/markets",
-      docs: "https://docs.spark.fi/",
-    };
-  }
+  const fallback = `https://etherscan.io/token/${market.assetAddress}`;
+  const protocolLinks = getProtocolLinksForSlug(market.protocolSlug);
+  const app = buildPoolAppLink(market, protocolLinks?.poolLinks, chain) ?? protocolLinks?.app ?? protocolLinks?.website ?? fallback;
+  const docs = protocolLinks?.poolLinks?.docs ?? protocolLinks?.docs ?? protocolLinks?.website ?? fallback;
   return {
-    app: `https://etherscan.io/token/${address}`,
-    docs: `https://etherscan.io/token/${address}`,
+    app,
+    docs,
   };
 }
 
-function aaveMarketName(chain: string): string {
-  if (chain === "ethereum") return "proto_mainnet_v3";
-  return `proto_${chain}_v3`;
+function buildPoolAppLink(market: LendingMarket, links: ProtocolPoolLinks | undefined, chain: string): string | undefined {
+  if (!links?.app) return undefined;
+  return renderPoolTemplate(links.app, {
+    assetAddress: market.assetAddress,
+    chain,
+    chainId: links.chainIds?.[chain],
+    marketId: market.marketId,
+    marketIdHex64: market.marketId.match(/0x[a-f0-9]{64}$/i)?.[0],
+    marketName: links.marketNames?.[chain] ?? renderPoolTemplate(links.marketNameTemplate, { chain }),
+  }) ?? links.fallbackApp;
 }
 
-function sparkChainId(chain: string): number | null {
-  if (chain === "ethereum") return 1;
-  return null;
+function renderPoolTemplate(template: string | undefined, values: Record<string, string | number | undefined>): string | undefined {
+  if (!template) return undefined;
+  let hasMissingValue = false;
+  const rendered = template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key: string) => {
+    const value = values[key];
+    if (value === undefined || value === "") {
+      hasMissingValue = true;
+      return "";
+    }
+    return encodeURIComponent(String(value));
+  });
+  return hasMissingValue ? undefined : rendered;
 }

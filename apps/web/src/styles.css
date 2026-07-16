@@ -616,6 +616,7 @@ select {
 .trending-list li {
   display: grid;
   grid-template-columns: 26px 36px minmax(0, 1fr) auto;
+  column-gap: 10px;
   align-items: center;
   min-height: 56px;
   padding: 8px 16px;
@@ -1033,7 +1034,7 @@ select {
   width: 38px;
   height: 38px;
   border: 1px solid #292929;
-  border-radius: 10px;
+  border-radius: 999px;
   background:
     linear-gradient(180deg, rgb(255 255 255 / 4%), rgb(255 255 255 / 0%)),
     #141414;
@@ -1041,6 +1042,18 @@ select {
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0;
+  overflow: hidden;
+}
+
+.protocol-symbol.has-image {
+  background: #101010;
+}
+
+.protocol-symbol img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 .protocol-right {
@@ -1144,6 +1157,41 @@ select {
   font-size: 12px;
   font-weight: 650;
   text-decoration: none;
+}
+
+.protocol-description {
+  max-width: 720px;
+  margin: 8px 0 0;
+  color: #949494;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.protocol-link-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.protocol-link-row a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #2b2b2b;
+  border-radius: 999px;
+  background: #101010;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.protocol-link-row a:hover {
+  background: #181818;
 }
 
 .protocol-version-tabs {

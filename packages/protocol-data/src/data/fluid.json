@@ -1,0 +1,13 @@
+{
+  "id": "fluid",
+  "slugs": ["fluid"],
+  "aliases": ["Fluid"],
+  "name": "Fluid",
+  "symbol": "FLUID",
+  "description": "Instadapp's Fluid liquidity layer for lending, borrowing, and vault-based money markets.",
+  "logo": "https://icons.llamao.fi/icons/protocols/fluid?w=96&h=96",
+  "website": "https://fluid.instadapp.io",
+  "app": "https://fluid.instadapp.io",
+  "docs": "https://docs.fluid.instadapp.io",
+  "x": "https://x.com/0xfluid"
+}

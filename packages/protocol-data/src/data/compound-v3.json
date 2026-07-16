@@ -1,0 +1,16 @@
+{
+  "id": "compound-v3",
+  "slugs": ["compound-v3"],
+  "aliases": ["Compound III"],
+  "name": "Compound III",
+  "symbol": "COMP",
+  "description": "Collateralized lending protocol built around isolated base-asset markets using the Compound Comet architecture.",
+  "logo": "https://icons.llamao.fi/icons/protocols/compound-finance?w=96&h=96",
+  "website": "https://compound.finance",
+  "app": "https://app.compound.finance",
+  "docs": "https://docs.compound.finance",
+  "poolLinks": {
+    "app": "https://app.compound.finance/markets/{chain}/{assetAddress}"
+  },
+  "x": "https://x.com/compoundfinance"
+}

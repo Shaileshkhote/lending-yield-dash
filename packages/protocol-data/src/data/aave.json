@@ -1,0 +1,35 @@
+{
+  "id": "aave",
+  "slugs": ["aave-v3", "aave-v4"],
+  "aliases": ["Aave V3", "Aave V4"],
+  "children": [
+    {
+      "id": "aave-v3",
+      "adapterSlug": "aave-v3",
+      "name": "Aave V3",
+      "symbol": "AAVE",
+      "docs": "https://aave.com/docs/developers/aave-v3/markets",
+      "poolLinks": {
+        "app": "https://app.aave.com/reserve-overview/?underlyingAsset={assetAddress}&marketName={marketName}",
+        "marketNames": {
+          "ethereum": "proto_mainnet_v3"
+        },
+        "marketNameTemplate": "proto_{chain}_v3"
+      }
+    },
+    {
+      "id": "aave-v4",
+      "adapterSlug": "aave-v4",
+      "name": "Aave V4",
+      "symbol": "AAVE"
+    }
+  ],
+  "name": "Aave",
+  "symbol": "AAVE",
+  "description": "Decentralized liquidity protocol for supplying assets, borrowing against collateral, and building lending markets across EVM networks.",
+  "logo": "https://icons.llamao.fi/icons/protocols/aave?w=96&h=96",
+  "website": "https://aave.com",
+  "app": "https://app.aave.com",
+  "docs": "https://aave.com/docs",
+  "x": "https://x.com/aave"
+}

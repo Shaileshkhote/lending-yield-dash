@@ -1,8 +1,10 @@
+import { getProtocolChildData, getProtocolData, protocolGroupIdForSlug, type ProtocolChildData, type ProtocolData } from "@lendingscope/protocol-data";
 import type { LendingMarket } from "./api";
 
 export type ProtocolVariant = {
   id: string;
   label: string;
+  metadata?: ProtocolChildData;
   markets: LendingMarket[];
 };
 
@@ -10,6 +12,7 @@ export type ProtocolGroup = {
   id: string;
   label: string;
   symbol: string;
+  metadata?: ProtocolData;
   markets: LendingMarket[];
   variants: ProtocolVariant[];
 };
@@ -19,14 +22,6 @@ export type ProtocolSelection = {
   variant?: ProtocolVariant;
   label: string;
   markets: LendingMarket[];
-};
-
-const PROTOCOL_META: Record<string, { label: string; symbol: string }> = {
-  aave: { label: "Aave", symbol: "AAVE" },
-  "compound-v3": { label: "Compound III", symbol: "COMP" },
-  fluid: { label: "Fluid", symbol: "FLUID" },
-  "morpho-blue": { label: "Morpho Blue", symbol: "MORPHO" },
-  spark: { label: "Spark", symbol: "SPK" },
 };
 
 export function buildProtocolGroups(markets: LendingMarket[]): ProtocolGroup[] {
@@ -39,20 +34,22 @@ export function buildProtocolGroups(markets: LendingMarket[]): ProtocolGroup[] {
   return [...grouped.entries()]
     .map(([id, rows]) => {
       const variants = [...new Map(rows.map((market) => [market.protocolSlug, market.protocol])).entries()]
-        .map(([variantId, label]) => ({
-          id: variantId,
-          label,
-          markets: rows.filter((market) => market.protocolSlug === variantId),
-        }))
+        .map(([variantId, label]) => {
+          const childMeta = getProtocolChildData(variantId);
+          return {
+            id: variantId,
+            label: childMeta?.name ?? label,
+            metadata: childMeta,
+            markets: rows.filter((market) => market.protocolSlug === variantId),
+          };
+        })
         .sort((a, b) => a.label.localeCompare(b.label));
-      const meta = PROTOCOL_META[id] ?? {
-        label: rows[0]?.protocol ?? titleCase(id),
-        symbol: protocolSymbol(rows[0]?.protocol ?? id),
-      };
+      const meta = getProtocolData(id);
       return {
         id,
-        label: meta.label,
-        symbol: meta.symbol,
+        label: meta?.name ?? rows[0]?.protocol ?? titleCase(id),
+        symbol: meta?.symbol ?? protocolSymbol(rows[0]?.protocol ?? id),
+        metadata: meta,
         markets: rows,
         variants,
       };
@@ -101,8 +98,7 @@ export function protocolStats(markets: LendingMarket[]) {
 }
 
 function protocolGroupId(market: LendingMarket): string {
-  if (market.protocolSlug === "aave-v3" || market.protocolSlug === "aave-v4") return "aave";
-  return market.protocolSlug;
+  return protocolGroupIdForSlug(market.protocolSlug);
 }
 
 function protocolSymbol(protocol: string): string {

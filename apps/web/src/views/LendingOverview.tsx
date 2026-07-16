@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Check, ChevronDown, Columns3, Github, Search, X } from "lucide-react";
+import { getProtocolDataByName, listProtocolDisplayNames } from "@lendingscope/protocol-data";
 import { defaultMarketColumns, hideableMarketColumns, MarketTable, type MarketColumnKey } from "../components/MarketTable";
 import { LendingOverviewSkeleton } from "../components/Skeletons";
 import { chainLogoUrls } from "../lib/chains";
@@ -17,14 +18,7 @@ type RangeTuple = [number, number];
 type RangeState = Partial<Record<RangeKey, RangeTuple>>;
 type ActiveFilter = { id: string; label: string; onRemove: () => void };
 
-const knownProtocols = ["Aave V3", "Aave V4", "Compound III", "Morpho Blue", "Spark"];
-const protocolIconSlugs: Record<string, string> = {
-  "Aave V3": "aave",
-  "Aave V4": "aave",
-  "Compound III": "compound-finance",
-  "Morpho Blue": "morpho-blue",
-  Spark: "spark",
-};
+const protocolDisplayNames = listProtocolDisplayNames();
 const assetTypeIconSymbols: Record<string, string> = {
   stablecoins: "USDC",
   bluechips: "WBTC",
@@ -79,7 +73,12 @@ export function LendingOverview() {
 
   const rows = data?.data ?? [];
   const chains = useMemo(() => [...new Set(rows.map((row) => row.chain))].sort(), [rows]);
-  const protocols = useMemo(() => [...knownProtocols, ...[...new Set(rows.map((row) => row.protocol))].filter((protocol) => !knownProtocols.includes(protocol)).sort()], [rows]);
+  const protocols = useMemo(() => {
+    const availableProtocols = new Set(rows.map((row) => row.protocol));
+    const orderedProtocols = protocolDisplayNames.filter((protocol) => availableProtocols.has(protocol));
+    const extraProtocols = [...availableProtocols].filter((protocol) => !orderedProtocols.includes(protocol)).sort();
+    return [...orderedProtocols, ...extraProtocols];
+  }, [rows]);
   const rangeBounds = useMemo(
     () => ({
       supplied: numericBounds(rows.map((row) => row.totalSuppliedUsd), [0, 1]),
@@ -587,8 +586,8 @@ function rangePercent(value: number, min: number, max: number) {
 }
 
 function protocolIconUrls(protocol: string) {
-  const slug = protocolIconSlugs[protocol];
-  return slug ? [`https://icons.llamao.fi/icons/protocols/${slug}?w=48&h=48`] : [];
+  const metadata = getProtocolDataByName(protocol);
+  return metadata?.logo ? [metadata.logo] : [];
 }
 
 function assetTypeIconUrls(value: string) {

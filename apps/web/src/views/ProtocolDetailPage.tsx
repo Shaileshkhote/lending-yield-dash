@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -25,6 +25,9 @@ export function ProtocolDetailPage() {
     [groups, resolvedProtocolId],
   );
   const stats = selection ? protocolStats(selection.markets) : null;
+  const metadata = selection
+    ? { ...selection.group.metadata, ...selection.variant?.metadata }
+    : undefined;
 
   if (!data) {
     return (
@@ -65,6 +68,15 @@ export function ProtocolDetailPage() {
         <div>
           <p className="eyebrow">{selection.group.label}</p>
           <h1>{selection.label}</h1>
+          {metadata?.description ? <p className="protocol-description">{metadata.description}</p> : null}
+          {metadata?.website ? (
+            <div className="protocol-link-row">
+              <ProtocolLink href={metadata.website} label="Website" />
+              {metadata.app ? <ProtocolLink href={metadata.app} label="App" /> : null}
+              {metadata.docs ? <ProtocolLink href={metadata.docs} label="Docs" /> : null}
+              {metadata.x ? <ProtocolLink href={metadata.x} label="X" /> : null}
+            </div>
+          ) : null}
         </div>
         <Link className="protocol-back-link" href="/lending/protocols">
           Protocols
@@ -110,5 +122,14 @@ function Metric({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
+  );
+}
+
+function ProtocolLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer">
+      {label}
+      <ExternalLink size={13} />
+    </a>
   );
 }
