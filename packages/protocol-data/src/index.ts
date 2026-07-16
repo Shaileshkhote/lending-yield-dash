@@ -1,3 +1,4 @@
+import chainData from "./data/chains.json";
 import { protocolDataFiles } from "./generated/protocols";
 
 export type ProtocolPoolLinks = {
@@ -39,7 +40,17 @@ export type ProtocolData = {
   poolLinks?: ProtocolPoolLinks;
 };
 
+export type ChainData = {
+  id: string;
+  aliases?: string[];
+  label: string;
+  short: string;
+  logo?: string;
+  trustWalletSlug?: string;
+};
+
 export const protocols = protocolDataFiles as ProtocolData[];
+export const chains = chainData as ChainData[];
 
 export const protocolsById = Object.fromEntries(
   protocols.map((protocol) => [protocol.id, protocol]),
@@ -114,6 +125,62 @@ export function protocolGroupIdForSlug(slug: string): string {
   return protocolChildrenBySlug[slug]?.parentId ?? protocolsBySlug[slug]?.id ?? slug;
 }
 
+const chainsById = Object.fromEntries(
+  chains.flatMap((chain) => [
+    [normalizeChainId(chain.id), chain] as const,
+    ...(chain.aliases ?? []).map((alias) => [normalizeChainId(alias), chain] as const),
+  ]),
+) as Record<string, ChainData>;
+
+export function getChainData(chain: string): ChainData | undefined {
+  return chainsById[normalizeChainId(chain)];
+}
+
+export function chainMeta(chain: string): { label: string; short: string } {
+  const metadata = getChainData(chain);
+  return metadata
+    ? { label: metadata.label, short: metadata.short }
+    : { label: titleCase(chain), short: chain.slice(0, 5).toUpperCase() };
+}
+
+export function trustWalletChainLogoUrl(chain?: string): string | null {
+  if (!chain) return null;
+  const slug = trustWalletChainSlug(chain);
+  if (!slug) return null;
+  return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${slug}/info/logo.png`;
+}
+
+export function trustWalletChainSlug(chain: string): string | undefined {
+  return getChainData(chain)?.trustWalletSlug;
+}
+
+export function chainLogoUrls(chain?: string): string[] {
+  if (!chain) return [];
+  const normalized = normalizeChainId(chain);
+  const metadata = getChainData(chain);
+  return unique([
+    metadata?.logo,
+    trustWalletChainLogoUrl(chain),
+    `https://icons.llamao.fi/icons/chains/rsz_${metadata?.id ?? normalized}?w=48&h=48`,
+  ]);
+}
+
 function normalizeName(name: string): string {
   return name.trim().toLowerCase();
+}
+
+function normalizeChainId(chain: string): string {
+  return chain.trim().toLowerCase();
+}
+
+function unique(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function titleCase(value: string): string {
+  return value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+    .join(" ");
 }

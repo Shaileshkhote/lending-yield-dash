@@ -7,7 +7,7 @@ const outputDir = new URL("src/generated/", root);
 const outputFile = new URL("protocols.ts", outputDir);
 
 const files = (await readdir(dataDir))
-  .filter((file) => file.endsWith(".json"))
+  .filter((file) => file.endsWith(".json") && file !== "chains.json")
   .sort();
 
 const imports = files.map((file, index) => {

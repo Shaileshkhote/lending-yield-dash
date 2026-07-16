@@ -1,0 +1,85 @@
+[
+  {
+    "id": "ethereum",
+    "label": "Ethereum",
+    "short": "ETH",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_ethereum?w=48&h=48",
+    "trustWalletSlug": "ethereum"
+  },
+  {
+    "id": "base",
+    "label": "Base",
+    "short": "BASE",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_base?w=48&h=48",
+    "trustWalletSlug": "base"
+  },
+  {
+    "id": "arbitrum",
+    "label": "Arbitrum",
+    "short": "ARB",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_arbitrum?w=48&h=48",
+    "trustWalletSlug": "arbitrum"
+  },
+  {
+    "id": "optimism",
+    "label": "Optimism",
+    "short": "OP",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_optimism?w=48&h=48",
+    "trustWalletSlug": "optimism"
+  },
+  {
+    "id": "polygon",
+    "label": "Polygon",
+    "short": "POL",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_polygon?w=48&h=48",
+    "trustWalletSlug": "polygon"
+  },
+  {
+    "id": "avalanche",
+    "aliases": ["avax"],
+    "label": "Avalanche",
+    "short": "AVAX",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_avalanche?w=48&h=48",
+    "trustWalletSlug": "avalanchec"
+  },
+  {
+    "id": "bsc",
+    "aliases": ["bnb", "bnb-chain"],
+    "label": "BNB Chain",
+    "short": "BNB",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_bsc?w=48&h=48",
+    "trustWalletSlug": "smartchain"
+  },
+  {
+    "id": "unichain",
+    "label": "Unichain",
+    "short": "UNI",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_unichain?w=48&h=48"
+  },
+  {
+    "id": "hyperevm",
+    "aliases": ["hyper-evm"],
+    "label": "HyperEVM",
+    "short": "HYPE",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_hyperevm?w=48&h=48"
+  },
+  {
+    "id": "katana",
+    "label": "Katana",
+    "short": "KTN",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_katana?w=48&h=48"
+  },
+  {
+    "id": "worldchain",
+    "aliases": ["world-chain"],
+    "label": "World Chain",
+    "short": "WLD",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_worldchain?w=48&h=48"
+  },
+  {
+    "id": "stable",
+    "label": "Stable",
+    "short": "STBL",
+    "logo": "https://icons.llamao.fi/icons/chains/rsz_stable?w=48&h=48"
+  }
+]

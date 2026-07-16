@@ -1,5 +1,5 @@
 import { getAddress, isAddress } from "viem";
-import { TRUST_WALLET_CHAIN_SLUGS } from "./chains";
+import { trustWalletChainSlug } from "./chains";
 
 const DEFILLAMA_GECKO_IDS: Record<string, string> = {
   "1inch": "1inch",
@@ -123,7 +123,7 @@ function trustWalletLogoUrl(args: { symbol: string; chain?: string; address?: st
   const address = args.address ?? fallback?.address;
   if (!chain || !address || !isAddress(address)) return null;
 
-  const trustWalletChain = TRUST_WALLET_CHAIN_SLUGS[chain.toLowerCase()];
+  const trustWalletChain = trustWalletChainSlug(chain);
   if (!trustWalletChain) return null;
 
   return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${trustWalletChain}/assets/${getAddress(address)}/logo.png`;
