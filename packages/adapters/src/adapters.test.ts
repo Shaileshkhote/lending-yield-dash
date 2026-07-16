@@ -40,6 +40,7 @@ describe("lending adapters", () => {
       "aave-v3",
       "aave-v4",
       "compound-v3",
+      "fluid",
       "morpho-blue",
       "spark",
     ]);
@@ -61,6 +62,10 @@ describe("lending adapters", () => {
     expect(getAdapter("compound-v3").protocol).toBe("Compound III");
     expect(getAdapter("compound-v3").version).toBe(
       ADAPTER_VERSION.GRAPHQL_SUBGRAPH_SNAPSHOT,
+    );
+    expect(getAdapter("fluid").protocol).toBe("Fluid");
+    expect(getAdapter("fluid").version).toBe(
+      ADAPTER_VERSION.CONTRACT_RPC_SNAPSHOT,
     );
     expect(getAdapter("morpho-blue").protocol).toBe("Morpho Blue");
     expect(getAdapter("morpho-blue").version).toBe(
@@ -87,6 +92,21 @@ describe("lending adapters", () => {
       getAdapter("compound-v3").dataAvailability.history?.startDateByChain
         .ethereum,
     ).toBe("2022-08-13");
+    expect(
+      getAdapter("fluid").dataAvailability.history?.startDateByChain.ethereum,
+    ).toBe("2024-01-01");
+    expect(
+      getAdapter("fluid").dataAvailability.history?.startDateByChain.arbitrum,
+    ).toBe("2024-01-01");
+    expect(
+      getAdapter("fluid").dataAvailability.history?.startDateByChain.base,
+    ).toBe("2024-01-01");
+    expect(
+      getAdapter("fluid").dataAvailability.history?.startDateByChain.bsc,
+    ).toBe("2024-01-01");
+    expect(
+      getAdapter("fluid").dataAvailability.history?.startDateByChain.polygon,
+    ).toBe("2024-01-01");
     expect(
       getAdapter("morpho-blue").dataAvailability.history?.startDateByChain
         .ethereum,

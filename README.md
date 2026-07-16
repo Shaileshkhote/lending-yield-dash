@@ -107,11 +107,14 @@ THE_GRAPH_API_KEY
 THE_GRAPH_GATEWAY_URL
 ```
 
-Optional RPC variables are used to resolve historical UTC dates to block numbers during backfills:
+Optional RPC variables are used by RPC-backed adapters and to resolve historical UTC dates to block numbers during backfills:
 
 ```txt
 ETHEREUM_RPC_URL
+ARBITRUM_RPC_URL
 BASE_RPC_URL
+BSC_RPC_URL
+POLYGON_RPC_URL
 ```
 
 Optional R2 variables enable public cache uploads:

@@ -1,11 +1,20 @@
 export const CHAIN = {
   ETHEREUM: "ethereum",
-  BASE: "base"
+  ARBITRUM: "arbitrum",
+  BASE: "base",
+  BSC: "bsc",
+  POLYGON: "polygon"
 } as const;
 
 export type Chain = (typeof CHAIN)[keyof typeof CHAIN];
 
-export const SUPPORTED_CHAINS: readonly Chain[] = [CHAIN.ETHEREUM, CHAIN.BASE];
+export const SUPPORTED_CHAINS: readonly Chain[] = [
+  CHAIN.ETHEREUM,
+  CHAIN.ARBITRUM,
+  CHAIN.BASE,
+  CHAIN.BSC,
+  CHAIN.POLYGON
+];
 
 export const PUBLIC_RPC_URLS: Record<Chain, readonly string[]> = {
   [CHAIN.ETHEREUM]: [
@@ -16,6 +25,13 @@ export const PUBLIC_RPC_URLS: Record<Chain, readonly string[]> = {
     "https://cloudflare-eth.com",
     "https://rpc.flashbots.net"
   ],
+  [CHAIN.ARBITRUM]: [
+    "https://arbitrum.gateway.tenderly.co",
+    "https://arb1.arbitrum.io/rpc",
+    "https://arbitrum.llamarpc.com",
+    "https://arbitrum-one-rpc.publicnode.com",
+    "https://arbitrum.drpc.org"
+  ],
   [CHAIN.BASE]: [
     "https://base.gateway.tenderly.co",
     "https://base.llamarpc.com",
@@ -25,6 +41,20 @@ export const PUBLIC_RPC_URLS: Record<Chain, readonly string[]> = {
     "https://mainnet.base.org/",
     "https://developer-access-mainnet.base.org/",
     "https://base-rpc.publicnode.com"
+  ],
+  [CHAIN.BSC]: [
+    "https://bsc-dataseed.binance.org",
+    "https://bsc-dataseed1.defibit.io",
+    "https://bsc-dataseed1.ninicoin.io",
+    "https://bsc-rpc.publicnode.com",
+    "https://bsc.drpc.org"
+  ],
+  [CHAIN.POLYGON]: [
+    "https://polygon.gateway.tenderly.co",
+    "https://polygon.llamarpc.com",
+    "https://polygon-bor-rpc.publicnode.com",
+    "https://polygon-rpc.com",
+    "https://polygon.drpc.org"
   ]
 };
 
