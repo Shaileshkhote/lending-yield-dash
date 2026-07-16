@@ -1,10 +1,10 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { BarChart3, ExternalLink, Info, Percent, Share2, WalletCards } from "lucide-react";
 import type { ReactNode } from "react";
-import { Bar, BarChart, Brush, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, Brush, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChainBadge } from "../components/ChainBadge";
 import { MarketDetailSkeleton } from "../components/Skeletons";
 import { TokenLogo } from "../components/TokenLogo";
@@ -29,6 +29,8 @@ const chartRanges: Array<{ value: ChartRange; label: string }> = [
 
 const DESKTOP_CHART_POINTS = 420;
 const COMPACT_CHART_POINTS = 220;
+const DESKTOP_BAR_POINTS = 240;
+const COMPACT_BAR_POINTS = 140;
 const chartTooltipStyle = {
   background: "var(--chart-tooltip-bg)",
   border: "1px solid var(--chart-tooltip-border)",
@@ -55,6 +57,7 @@ export function MarketDetailPage() {
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [isCompactChart, setIsCompactChart] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!resolvedMarketId) return;
@@ -94,9 +97,15 @@ export function MarketDetailPage() {
       })),
     [history, market]
   );
+  const activeChart = useMemo(() => {
+    return getChartConfig(chartMetric);
+  }, [chartMetric]);
   const chartRenderData = useMemo(
-    () => downsampleChartData(chartData, isCompactChart ? COMPACT_CHART_POINTS : DESKTOP_CHART_POINTS),
-    [chartData, isCompactChart]
+    () => {
+      const maxPoints = chartPointLimit(activeChart.kind, isCompactChart);
+      return downsampleChartData(chartData, maxPoints);
+    },
+    [activeChart.kind, chartData, isCompactChart]
   );
 
   const apyChange = useMemo(() => {
@@ -113,9 +122,31 @@ export function MarketDetailPage() {
   const links = market ? poolLinks(market) : null;
   const chartHeight = isCompactChart ? 360 : 430;
   const brushY = isCompactChart ? 292 : 348;
-  const activeChart = useMemo(() => {
-    return getChartConfig(chartMetric);
-  }, [chartMetric]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || activeChart.kind !== "line") return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const paths = Array.from(chart.querySelectorAll<SVGGeometryElement>(".recharts-line-curve"));
+
+    paths.forEach((path) => {
+      if (reduceMotion || typeof path.getTotalLength !== "function") {
+        path.style.strokeDasharray = "";
+        path.style.strokeDashoffset = "";
+        path.style.transition = "";
+        return;
+      }
+
+      const length = Math.ceil(path.getTotalLength());
+      path.style.transition = "none";
+      path.style.strokeDasharray = String(length);
+      path.style.strokeDashoffset = String(length);
+      path.getBoundingClientRect();
+      path.style.transition = "stroke-dashoffset 680ms ease-out";
+      path.style.strokeDashoffset = "0";
+    });
+  }, [activeChart.kind, chartRenderData, chartMetric]);
 
   const handleShare = async () => {
     if (!market) return;
@@ -178,7 +209,7 @@ export function MarketDetailPage() {
               </select>
             </label>
           </div>
-          <div className={activeChart.kind === "line" ? "asset-chart draw-chart" : "asset-chart"}>
+          <div ref={chartRef} className={activeChart.kind === "line" ? "asset-chart draw-chart" : "asset-chart"}>
             <MemoizedMarketChart
               activeChart={activeChart}
               brushY={brushY}
@@ -347,15 +378,9 @@ const MemoizedMarketChart = memo(function MarketChart({
           <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary)" strokeWidth={2.6} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
         )}
         <Brush dataKey="date" height={44} y={brushY} stroke="var(--chart-brush-stroke)" fill="var(--chart-brush-bg)" travellerWidth={8} alwaysShowText={false}>
-          {activeChart.kind === "bar" ? (
-            <BarChart data={chartData}>
-              <Bar dataKey={activeChart.dataKey} fill="var(--chart-primary-soft)" maxBarSize={8} isAnimationActive={false} />
-            </BarChart>
-          ) : (
-            <LineChart data={chartData}>
-              <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary-soft)" strokeWidth={1.4} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
-            </LineChart>
-          )}
+          <LineChart data={chartData}>
+            <Line type="monotone" dataKey={activeChart.dataKey} stroke="var(--chart-primary-soft)" strokeWidth={1.4} dot={false} activeDot={false} connectNulls isAnimationActive={false} />
+          </LineChart>
         </Brush>
       </ComposedChart>
     </ResponsiveContainer>
@@ -375,6 +400,11 @@ function downsampleChartData<T>(data: T[], maxPoints: number): T[] {
   }
 
   return sampled;
+}
+
+function chartPointLimit(kind: ChartConfig["kind"], compact: boolean): number {
+  if (kind === "bar") return compact ? COMPACT_BAR_POINTS : DESKTOP_BAR_POINTS;
+  return compact ? COMPACT_CHART_POINTS : DESKTOP_CHART_POINTS;
 }
 
 function formatSignedPct(value: number | null | undefined): string | null {

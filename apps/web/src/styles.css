@@ -2016,26 +2016,6 @@ select {
   font-size: 12px;
 }
 
-.asset-chart.draw-chart .recharts-line-curve {
-  stroke-dasharray: 1600;
-  stroke-dashoffset: 1600;
-  animation: chart-line-draw 680ms ease-out forwards;
-}
-
-@keyframes chart-line-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .asset-chart.draw-chart .recharts-line-curve {
-    animation: none;
-    stroke-dasharray: none;
-    stroke-dashoffset: 0;
-  }
-}
-
 .share-chart {
   position: absolute;
   right: 25px;
