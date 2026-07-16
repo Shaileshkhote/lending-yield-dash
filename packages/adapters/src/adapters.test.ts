@@ -103,7 +103,7 @@ describe("lending adapters", () => {
     ).toBe("2024-01-01");
     expect(
       getAdapter("fluid").dataAvailability.history?.startDateByChain.bsc,
-    ).toBe("2024-01-01");
+    ).toBeUndefined();
     expect(
       getAdapter("fluid").dataAvailability.history?.startDateByChain.polygon,
     ).toBe("2024-01-01");
