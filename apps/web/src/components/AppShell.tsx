@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BookOpen, Github, Home } from "lucide-react";
+import { BarChart3, BookOpen, Github, Home, Layers3 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 const nav = [
   { to: "/lending", label: "Home", icon: Home },
   { to: "/lending/markets", label: "Market", icon: BarChart3 },
+  { to: "/lending/protocols", label: "Protocols", icon: Layers3 },
   { to: "/lending/sources", label: "Methodology", icon: BookOpen }
 ];
 
